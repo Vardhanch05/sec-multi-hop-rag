@@ -287,11 +287,12 @@ Sectors: Tech, Finance, Healthcare, Energy, Consumer/Retail
 ### Completed
 - [x] Task 1 — Repo scaffold: folder structure, `requirements.txt`, `.env.example`, `README.md`, `.gitignore`, all `__init__.py` files
 - [x] Task 2 — `config/settings.py` (all env-var-backed constants), `config/tickers.json` (20 tickers), `tests/test_settings.py` (6 passing tests)
+- [x] Task 3 — Database layer: `db/schema.sql`, `db/connection.py`, `db/queries.py`, `tests/test_db.py` (2 passing tests)
 
 ### In Progress / Next
-- [ ] Task 3 — Database layer: `db/schema.sql`, `db/connection.py`, `db/queries.py`, `tests/test_db.py`
+- [ ] Task 4 — Implement `ingestion/edgar_client.py`
 
-### Remaining (Tasks 4–27)
+### Remaining (Tasks 5–27)
 See `tasks.md` for the full list. Summary:
 - Tasks 4–10: Ingestion pipeline (EDGAR client, PDF extractor, section chunker, embedder, vector store, GitHub Actions)
 - Tasks 12–15: Retrieval engine (query classifier, hop planner, retriever, claim extractor)
