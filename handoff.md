@@ -5,11 +5,12 @@ The SEC Filing Multi-Hop RAG System is a full-stack AI financial research tool. 
 
 ## Current State
 **Status:** In Progress (Week 2 of development).
-**Completed Tasks:** Tasks 1 through 4.
+**Completed Tasks:** Tasks 1 through 5.
 - **Task 1 & 2:** Repository scaffolding, dependency pinning, and `config/settings.py` setup.
 - **Task 3:** Relational Database Layer built (`db/schema.sql`, `db/connection.py`, `db/queries.py`).
 - **Task 4:** SEC EDGAR Client (`ingestion/edgar_client.py`) implemented, supporting fetching metadata and downloading PDFs with retry/backoff and deduplication checks.
-- **Tests:** All 10 property and unit tests are currently passing (`pytest`).
+- **Task 5:** PDF Extractor (`ingestion/pdf_extractor.py`) built using `pdfplumber`, identifying image-only PDFs and cleanly extracting text.
+- **Tests:** All 13 property and unit tests are currently passing (`pytest`).
 
 ## Architecture & Tech Stack
 - **Primary LLM**: `llama-3.3-70b-versatile` (via Groq API).
@@ -25,7 +26,7 @@ The SEC Filing Multi-Hop RAG System is a full-stack AI financial research tool. 
 4. **Context Maintenance**: Keep `full_context.md` perfectly updated after completing any task.
 
 ## Next Immediate Task
-**Task 5: Implement `ingestion/pdf_extractor.py`**
-- Implement `extract_text(pdf_path)` using `pdfplumber` to extract page-by-page text.
-- Implement `is_extractable(pdf_path)` to log and gracefully skip image-only/scanned PDFs without crashing.
-- Write unit tests validating standard parsing vs. image-only rejection.
+**Task 6: Implement `ingestion/section_chunker.py`**
+- Segment the text by regex into standard SEC items (e.g., "Item 1A. Risk Factors", "Item 7. MD&A").
+- Break each section into 1000-token chunks with 200-token overlap.
+- Implement Property 1 (Metadata Completeness), Property 2 (Section Validity), and Property 22 (Serialization Round-trip).

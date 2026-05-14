@@ -289,11 +289,12 @@ Sectors: Tech, Finance, Healthcare, Energy, Consumer/Retail
 - [x] Task 2 — `config/settings.py` (all env-var-backed constants), `config/tickers.json` (20 tickers), `tests/test_settings.py` (6 passing tests)
 - [x] Task 3 — Database layer: `db/schema.sql`, `db/connection.py`, `db/queries.py`, `tests/test_db.py` (2 passing tests)
 - [x] Task 4 — Implement `ingestion/edgar_client.py`
+- [x] Task 5 — Implement `ingestion/pdf_extractor.py`
 
 ### In Progress / Next
-- [ ] Task 5 — Implement `ingestion/pdf_extractor.py`
+- [ ] Task 6 — Implement `ingestion/section_chunker.py`
 
-### Remaining (Tasks 6–27)
+### Remaining (Tasks 7–27)
 See `tasks.md` for the full list. Summary:
 - Tasks 4–10: Ingestion pipeline (EDGAR client, PDF extractor, section chunker, embedder, vector store, GitHub Actions)
 - Tasks 12–15: Retrieval engine (query classifier, hop planner, retriever, claim extractor)
