@@ -10,3 +10,26 @@ chroma_db/
 dist/
 build/
 *.egg-info/
+
+# Downloaded PDFs and Raw Data
+data/
+filings/
+downloads/
+*.pdf
+
+# Logs
+*.log
+logs/
+
+# IDEs and OS files
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+
+# Test coverage
+.coverage
+htmlcov/
+
+# Jupyter
+.ipynb_checkpoints/
