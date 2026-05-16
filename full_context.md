@@ -292,9 +292,10 @@ Sectors: Tech, Finance, Healthcare, Energy, Consumer/Retail
 - [x] Task 5 — Implement `ingestion/pdf_extractor.py`
 - [x] Task 6 — Implement `ingestion/section_chunker.py`
 - [x] Task 7 — Implement `ingestion/embedder.py`
+- [x] Task 8 — Implement `ingestion/vector_store.py`
 
 ### In Progress / Next
-- [ ] Task 8 — Implement `ingestion/vector_store.py`
+- [ ] Task 9 — Implement ingestion orchestration pipeline (main ingestion script)
 
 ### Remaining (Tasks 7–27)
 See `tasks.md` for the full list. Summary:
