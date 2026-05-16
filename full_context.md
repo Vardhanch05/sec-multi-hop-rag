@@ -291,9 +291,10 @@ Sectors: Tech, Finance, Healthcare, Energy, Consumer/Retail
 - [x] Task 4 — Implement `ingestion/edgar_client.py`
 - [x] Task 5 — Implement `ingestion/pdf_extractor.py`
 - [x] Task 6 — Implement `ingestion/section_chunker.py`
+- [x] Task 7 — Implement `ingestion/embedder.py`
 
 ### In Progress / Next
-- [ ] Task 7 — Implement `ingestion/embedder.py`
+- [ ] Task 8 — Implement `ingestion/vector_store.py`
 
 ### Remaining (Tasks 7–27)
 See `tasks.md` for the full list. Summary:
