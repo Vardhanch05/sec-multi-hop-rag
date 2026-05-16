@@ -290,9 +290,10 @@ Sectors: Tech, Finance, Healthcare, Energy, Consumer/Retail
 - [x] Task 3 — Database layer: `db/schema.sql`, `db/connection.py`, `db/queries.py`, `tests/test_db.py` (2 passing tests)
 - [x] Task 4 — Implement `ingestion/edgar_client.py`
 - [x] Task 5 — Implement `ingestion/pdf_extractor.py`
+- [x] Task 6 — Implement `ingestion/section_chunker.py`
 
 ### In Progress / Next
-- [ ] Task 6 — Implement `ingestion/section_chunker.py`
+- [ ] Task 7 — Implement `ingestion/embedder.py`
 
 ### Remaining (Tasks 7–27)
 See `tasks.md` for the full list. Summary:
