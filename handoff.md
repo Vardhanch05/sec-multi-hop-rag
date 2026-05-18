@@ -5,7 +5,7 @@ The SEC Filing Multi-Hop RAG System is a full-stack AI financial research tool. 
 
 ## Current State
 **Status:** In Progress (Week 2 of development).
-**Completed Tasks:** Tasks 1 through 8.
+**Completed Tasks:** Tasks 1 through 12.
 - **Task 1 & 2:** Repository scaffolding, dependency pinning, and `config/settings.py` setup.
 - **Task 3:** Relational Database Layer built (`db/schema.sql`, `db/connection.py`, `db/queries.py`).
 - **Task 4:** SEC EDGAR Client (`ingestion/edgar_client.py`) implemented, supporting fetching metadata and downloading PDFs with retry/backoff and deduplication checks.
@@ -13,7 +13,9 @@ The SEC Filing Multi-Hop RAG System is a full-stack AI financial research tool. 
 - **Task 6:** Section Chunker (`ingestion/section_chunker.py`) built, segmenting text by regex into standard SEC items and producing chunks.
 - **Task 7:** Embedder (`ingestion/embedder.py`) implemented with `sentence-transformers/all-MiniLM-L6-v2`.
 - **Task 8:** Vector Store (`ingestion/vector_store.py`) implemented, supporting both ChromaDB and Qdrant.
-- **Tests:** All 24 property and unit tests are currently passing (`pytest`).
+- **Task 9-11:** Ingestion Orchestration and CI/CD (`ingestion/pipeline.py`, `.github/workflows/`) implemented with property tests and deduplication.
+- **Task 12:** Query Classifier (`retrieval/query_classifier.py`) implemented to parse cross-company hop logic natively.
+- **Tests:** All 28 property and unit tests are currently passing (`pytest`).
 
 ## Architecture & Tech Stack
 - **Primary LLM**: `llama-3.3-70b-versatile` (via Groq API).
@@ -29,5 +31,5 @@ The SEC Filing Multi-Hop RAG System is a full-stack AI financial research tool. 
 4. **Context Maintenance**: Keep `full_context.md` perfectly updated after completing any task.
 
 ## Next Immediate Task
-**Task 9: Implement ingestion orchestration pipeline**
-- Implement the main ingestion script that ties together the EDGAR client, PDF extractor, section chunker, embedder, and vector store to process daily filings.
+**Task 13: Implement retrieval/hop_planner.py**
+- Implement temporal resolution for cross-period searches and dynamic query routing.

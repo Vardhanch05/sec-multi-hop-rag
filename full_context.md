@@ -293,13 +293,17 @@ Sectors: Tech, Finance, Healthcare, Energy, Consumer/Retail
 - [x] Task 6 — Implement `ingestion/section_chunker.py`
 - [x] Task 7 — Implement `ingestion/embedder.py`
 - [x] Task 8 — Implement `ingestion/vector_store.py`
+- [x] Task 9 — Implement ingestion orchestration pipeline (main ingestion script)
+- [x] Task 10 — Add GitHub Actions workflows
+- [x] Task 11 — Checkpoint — ensure all ingestion tests pass
+- [x] Task 12 — Implement `retrieval/query_classifier.py`
 
 ### In Progress / Next
-- [ ] Task 9 — Implement ingestion orchestration pipeline (main ingestion script)
+- [ ] Task 13 — Implement `retrieval/hop_planner.py`
 
-### Remaining (Tasks 7–27)
+### Remaining (Tasks 13–27)
 See `tasks.md` for the full list. Summary:
-- Tasks 4–10: Ingestion pipeline (EDGAR client, PDF extractor, section chunker, embedder, vector store, GitHub Actions)
+- Tasks 13–15: Retrieval engine (hop planner, retriever, claim extractor)
 - Tasks 12–15: Retrieval engine (query classifier, hop planner, retriever, claim extractor)
 - Tasks 17–20: Contradiction detection + LLM synthesis + integration test
 - Tasks 22–25: Streamlit UI + RAGAS evaluation harness
