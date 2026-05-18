@@ -11,10 +11,10 @@ jobs:
     steps:
     - uses: actions/checkout@v4
     
-    - name: Set up Python 3.14
+    - name: Set up Python 3.14.3
       uses: actions/setup-python@v5
       with:
-        python-version: "3.14"
+        python-version: "3.14.3"
         cache: 'pip'
         
     - name: Install dependencies
@@ -24,6 +24,7 @@ jobs:
         
     - name: Run ingestion pipeline
       env:
+        PYTHONPATH: .
         DB_BACKEND: ${{ secrets.DB_BACKEND }}
         DATABASE_URL: ${{ secrets.DATABASE_URL }}
         VECTOR_STORE_BACKEND: ${{ secrets.VECTOR_STORE_BACKEND }}
