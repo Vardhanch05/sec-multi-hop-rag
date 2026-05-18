@@ -103,3 +103,22 @@ def run_ingestion(tickers: List[str], since_date: date = None, dry_run: bool = F
             filings_added=filings_added,
             errors=errors
         )
+
+if __name__ == "__main__":
+    import json
+    import argparse
+    from config.settings import TICKERS_CONFIG
+    
+    parser = argparse.ArgumentParser(description="Run SEC ingestion pipeline.")
+    parser.add_argument("--dry-run", action="store_true", help="Log what would be ingested without writing.")
+    args = parser.parse_args()
+    
+    # Load tickers
+    with open(TICKERS_CONFIG, "r") as f:
+        tickers = json.load(f)
+        
+    logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s")
+    logger.info(f"Starting ingestion run for {len(tickers)} tickers. Dry run: {args.dry_run}")
+    
+    run_ingestion(tickers, dry_run=args.dry_run)
+    logger.info("Ingestion run complete.")
