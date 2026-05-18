@@ -16,6 +16,25 @@ The SEC Filing Multi-Hop RAG System is a full-stack AI financial research tool. 
 - **Task 9-11:** Ingestion Orchestration and CI/CD (`ingestion/pipeline.py`, `.github/workflows/`) implemented with property tests and deduplication.
 - **Task 12:** Query Classifier (`retrieval/query_classifier.py`) implemented to parse cross-company hop logic natively.
 - **Tests:** All 28 property and unit tests are currently passing (`pytest`).
+- **CI/CD Fix (2026-05-18):** Resolved three broken package versions in `requirements.txt` (`pdfplumber`, `qdrant-client`) and dropped the Python runtime in workflows from `3.14` (pre-release, unavailable on GitHub runners) to `3.13` (latest stable LTS).
+
+## Pinned Dependency Versions (Verified on PyPI)
+| Package | Version | Notes |
+|---|---|---|
+| `pdfplumber` | `0.11.9` | Latest stable |
+| `sentence-transformers` | `5.4.1` | |
+| `chromadb` | `1.5.9` | |
+| `qdrant-client` | `1.13.3` | v1.9.1 does **not** exist |
+| `groq` | `0.9.0` | |
+| `streamlit` | `1.57.0` | |
+| `hypothesis` | `6.108.5` | |
+| `pytest` | `8.2.2` | |
+| `ragas` | `0.4.3` | |
+| `transformers` | `5.8.0` | |
+| `torch` | `2.11.0` | CPU wheel via PyTorch extra-index-url |
+| `numpy` | `2.4.4` | |
+| `python-dotenv` | `1.0.1` | |
+| `requests` | `2.32.3` | |
 
 ## Architecture & Tech Stack
 - **Primary LLM**: `llama-3.3-70b-versatile` (via Groq API).
@@ -23,6 +42,7 @@ The SEC Filing Multi-Hop RAG System is a full-stack AI financial research tool. 
 - **Contradiction Detection**: `cross-encoder/nli-deberta-v3-base`.
 - **Vector Database**: ChromaDB (local dev) / Qdrant Cloud (prod).
 - **Relational DB**: SQLite (local dev) / PostgreSQL (prod).
+- **Python Runtime**: `3.13` (GitHub Actions `ubuntu-latest`). Do **not** bump to `3.14` — it is pre-release and not available on runners.
 
 ## Critical Guidelines for Agents
 1. **Property-Based Testing**: This codebase relies heavily on property-based testing via `hypothesis` to validate 22 specific mathematical and logic properties defined in the system design. DO NOT bypass or remove these tests.
