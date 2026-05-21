@@ -5,7 +5,7 @@ The SEC Filing Multi-Hop RAG System is a full-stack AI financial research tool. 
 
 ## Current State
 **Status:** In Progress (Week 2 of development).
-**Completed Tasks:** Tasks 1 through 13.
+**Completed Tasks:** Tasks 1 through 14.
 - **Task 1 & 2:** Repository scaffolding, dependency pinning, and `config/settings.py` setup.
 - **Task 3:** Relational Database Layer built (`db/schema.sql`, `db/connection.py`, `db/queries.py`).
 - **Task 4:** SEC EDGAR Client (`ingestion/edgar_client.py`) implemented, supporting fetching metadata and downloading PDFs with retry/backoff and deduplication checks.
@@ -16,7 +16,8 @@ The SEC Filing Multi-Hop RAG System is a full-stack AI financial research tool. 
 - **Task 9-11:** Ingestion Orchestration and CI/CD (`ingestion/pipeline.py`, `.github/workflows/`) implemented with property tests and deduplication.
 - **Task 12:** Query Classifier (`retrieval/query_classifier.py`) implemented to parse cross-company hop logic natively.
 - **Task 13:** Hop Planner (`retrieval/hop_planner.py`) implemented to resolve temporal references and construct concrete retrieval specs.
-- **Tests:** All 32 property and unit tests are currently passing (`pytest`).
+- **Task 14:** Retriever (`retrieval/retriever.py`) implemented to execute parallel vector searches concurrently.
+- **Tests:** All 36 property and unit tests are currently passing (`pytest`).
 - **CI/CD Fix (2026-05-18):** Resolved three broken package versions in `requirements.txt` (`pdfplumber`, `qdrant-client`) and dropped the Python runtime in workflows from `3.14` (pre-release, unavailable on GitHub runners) to `3.13` (latest stable LTS).
 
 ## Pinned Dependency Versions (Verified on PyPI)
@@ -52,5 +53,5 @@ The SEC Filing Multi-Hop RAG System is a full-stack AI financial research tool. 
 4. **Context Maintenance**: Keep `full_context.md` perfectly updated after completing any task.
 
 ## Next Immediate Task
-**Task 14: Implement retrieval/retriever.py**
-- Implement parallel vector store queries with metadata filters per hop.
+**Task 15: Implement retrieval/claim_extractor.py**
+- Implement structured claim extraction from retrieved chunks using the Groq LLM client.

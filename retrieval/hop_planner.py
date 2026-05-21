@@ -22,7 +22,7 @@ class FilingPeriod:
     filing_type: str     # "10-Q" | "10-K"
     filing_date: date
 
-@dataclass
+@dataclass(frozen=True)
 class HopSpec:
     ticker: str
     quarter: str | None
