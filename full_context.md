@@ -297,14 +297,14 @@ Sectors: Tech, Finance, Healthcare, Energy, Consumer/Retail
 - [x] Task 10 — Add GitHub Actions workflows
 - [x] Task 11 — Checkpoint — ensure all ingestion tests pass
 - [x] Task 12 — Implement `retrieval/query_classifier.py`
+- [x] Task 13 — Implement `retrieval/hop_planner.py`
 
 ### In Progress / Next
-- [ ] Task 13 — Implement `retrieval/hop_planner.py`
+- [ ] Task 14 — Implement `retrieval/retriever.py`
 
-### Remaining (Tasks 13–27)
+### Remaining (Tasks 14–27)
 See `tasks.md` for the full list. Summary:
-- Tasks 13–15: Retrieval engine (hop planner, retriever, claim extractor)
-- Tasks 12–15: Retrieval engine (query classifier, hop planner, retriever, claim extractor)
+- Tasks 14–15: Retrieval engine (retriever, claim extractor)
 - Tasks 17–20: Contradiction detection + LLM synthesis + integration test
 - Tasks 22–25: Streamlit UI + RAGAS evaluation harness
 - Tasks 26–27: Final checkpoint + deployment
