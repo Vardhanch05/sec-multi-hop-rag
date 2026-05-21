@@ -301,12 +301,14 @@ Sectors: Tech, Finance, Healthcare, Energy, Consumer/Retail
 
 - [x] Task 14 — Implement `retrieval/retriever.py`
 
-### In Progress / Next
-- [ ] Task 15 — Implement `retrieval/claim_extractor.py`
+- [x] Task 15 — Implement `retrieval/claim_extractor.py`
+- [x] Task 16 — Checkpoint — ensure all retrieval tests pass
 
-### Remaining (Tasks 15–27)
+### In Progress / Next
+- [ ] Task 17 — Implement `contradiction/contradiction_report.py`
+
+### Remaining (Tasks 17–27)
 See `tasks.md` for the full list. Summary:
-- Task 15: Retrieval engine (claim extractor)
 - Tasks 17–20: Contradiction detection + LLM synthesis + integration test
 - Tasks 22–25: Streamlit UI + RAGAS evaluation harness
 - Tasks 26–27: Final checkpoint + deployment
