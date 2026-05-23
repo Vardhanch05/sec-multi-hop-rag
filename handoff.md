@@ -4,8 +4,8 @@
 The SEC Filing Multi-Hop RAG System is a full-stack AI financial research tool. It enables analysts to ask complex, temporally-aware questions across multiple SEC EDGAR quarterly (10-Q) and annual (10-K) filings. The core differentiator is an **NLI-based contradiction detection layer** (`cross-encoder/nli-deberta-v3-base`) that automatically flags when a company's statements in one period conflict with statements from a prior period.
 
 ## Current State
-**Status:** In Progress (Week 2 of development).
-**Completed Tasks:** Tasks 1 through 16.
+**Status:** In Progress (Week 3 of development).
+**Completed Tasks:** Tasks 1 through 18.
 - **Task 1 & 2:** Repository scaffolding, dependency pinning, and `config/settings.py` setup.
 - **Task 3:** Relational Database Layer built (`db/schema.sql`, `db/connection.py`, `db/queries.py`).
 - **Task 4:** SEC EDGAR Client (`ingestion/edgar_client.py`) implemented, supporting fetching metadata and downloading PDFs with retry/backoff and deduplication checks.
@@ -18,7 +18,9 @@ The SEC Filing Multi-Hop RAG System is a full-stack AI financial research tool. 
 - **Task 13:** Hop Planner (`retrieval/hop_planner.py`) implemented to resolve temporal references and construct concrete retrieval specs.
 - **Task 14:** Retriever (`retrieval/retriever.py`) implemented to execute parallel vector searches concurrently.
 - **Task 15:** Claim Extractor (`retrieval/claim_extractor.py`) implemented structured LLM-based claim extraction.
-- **Task 16:** Checkpoint — ensure all 39 property and unit tests are currently passing (`pytest`).
+- **Task 16:** Checkpoint — ensure all retrieval tests are currently passing (`pytest`).
+- **Task 17:** Contradiction Data Contracts (`contradiction/contradiction_report.py`) implemented.
+- **Task 18:** NLI Scorer (`contradiction/nli_scorer.py`) implemented with a 5-step pipeline including DeBERTa cross-encoder property tests.
 - **CI/CD Fix (2026-05-18):** Resolved three broken package versions in `requirements.txt` (`pdfplumber`, `qdrant-client`) and dropped the Python runtime in workflows from `3.14` (pre-release, unavailable on GitHub runners) to `3.13` (latest stable LTS).
 
 ## Pinned Dependency Versions (Verified on PyPI)
@@ -54,5 +56,7 @@ The SEC Filing Multi-Hop RAG System is a full-stack AI financial research tool. 
 4. **Context Maintenance**: Keep `full_context.md` perfectly updated after completing any task.
 
 ## Next Immediate Task
-**Task 17: Implement contradiction/contradiction_report.py**
-- Define `ContradictionEvent` and `ContradictionReport` dataclasses.
+**Task 19: Implement synthesis/answer_synthesizer.py**
+- Implement `synthesize(query, claims, contradiction_report) -> ResponsePayload`.
+- Build citation list from claim metadata and include contradiction events.
+- Implement Groq retry/fallback logic on `RateLimitError`.
