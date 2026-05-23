@@ -5,7 +5,7 @@ The SEC Filing Multi-Hop RAG System is a full-stack AI financial research tool. 
 
 ## Current State
 **Status:** In Progress (Week 3 of development).
-**Completed Tasks:** Tasks 1 through 18.
+**Completed Tasks:** Tasks 1 through 19.
 - **Task 1 & 2:** Repository scaffolding, dependency pinning, and `config/settings.py` setup.
 - **Task 3:** Relational Database Layer built (`db/schema.sql`, `db/connection.py`, `db/queries.py`).
 - **Task 4:** SEC EDGAR Client (`ingestion/edgar_client.py`) implemented, supporting fetching metadata and downloading PDFs with retry/backoff and deduplication checks.
@@ -21,6 +21,7 @@ The SEC Filing Multi-Hop RAG System is a full-stack AI financial research tool. 
 - **Task 16:** Checkpoint — ensure all retrieval tests are currently passing (`pytest`).
 - **Task 17:** Contradiction Data Contracts (`contradiction/contradiction_report.py`) implemented.
 - **Task 18:** NLI Scorer (`contradiction/nli_scorer.py`) implemented with a 5-step pipeline including DeBERTa cross-encoder property tests.
+- **Task 19:** Answer Synthesizer (`synthesis/answer_synthesizer.py`) implemented with Groq API integration, citation formatting, contradiction propagation, and RateLimitError fallback handling.
 - **CI/CD Fix (2026-05-18):** Resolved three broken package versions in `requirements.txt` (`pdfplumber`, `qdrant-client`) and dropped the Python runtime in workflows from `3.14` (pre-release, unavailable on GitHub runners) to `3.13` (latest stable LTS).
 
 ## Pinned Dependency Versions (Verified on PyPI)
@@ -56,7 +57,6 @@ The SEC Filing Multi-Hop RAG System is a full-stack AI financial research tool. 
 4. **Context Maintenance**: Keep `full_context.md` perfectly updated after completing any task.
 
 ## Next Immediate Task
-**Task 19: Implement synthesis/answer_synthesizer.py**
-- Implement `synthesize(query, claims, contradiction_report) -> ResponsePayload`.
-- Build citation list from claim metadata and include contradiction events.
-- Implement Groq retry/fallback logic on `RateLimitError`.
+**Task 20: Write end-to-end query pipeline integration test**
+- Write `tests/test_integration.py` to exercise the full pipeline.
+- Test `classify_query` through `synthesize` using synthetic chunks covering all 20 tickers × 8 quarters.
