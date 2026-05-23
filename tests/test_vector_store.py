@@ -27,7 +27,7 @@ def chroma_store(monkeypatch):
     class MockChromaStore(ChromaStore):
         def __init__(self):
             self.client = chromadb.EphemeralClient()
-            self.collection = self.client.create_collection("sec_chunks")
+            self.collection = self.client.get_or_create_collection("test_sec_chunks")
             
     return MockChromaStore()
 

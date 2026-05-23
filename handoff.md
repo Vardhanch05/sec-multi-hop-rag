@@ -5,7 +5,7 @@ The SEC Filing Multi-Hop RAG System is a full-stack AI financial research tool. 
 
 ## Current State
 **Status:** In Progress (Week 3 of development).
-**Completed Tasks:** Tasks 1 through 19.
+**Completed Tasks:** Tasks 1 through 21.
 - **Task 1 & 2:** Repository scaffolding, dependency pinning, and `config/settings.py` setup.
 - **Task 3:** Relational Database Layer built (`db/schema.sql`, `db/connection.py`, `db/queries.py`).
 - **Task 4:** SEC EDGAR Client (`ingestion/edgar_client.py`) implemented, supporting fetching metadata and downloading PDFs with retry/backoff and deduplication checks.
@@ -22,6 +22,8 @@ The SEC Filing Multi-Hop RAG System is a full-stack AI financial research tool. 
 - **Task 17:** Contradiction Data Contracts (`contradiction/contradiction_report.py`) implemented.
 - **Task 18:** NLI Scorer (`contradiction/nli_scorer.py`) implemented with a 5-step pipeline including DeBERTa cross-encoder property tests.
 - **Task 19:** Answer Synthesizer (`synthesis/answer_synthesizer.py`) implemented with Groq API integration, citation formatting, contradiction propagation, and RateLimitError fallback handling.
+- **Task 20:** End-to-end query pipeline integration test (`tests/test_integration.py`) implemented, asserting 160 multi-hop combination retrieval operations execute completely.
+- **Task 21:** Checkpoint — ensured all 47 component tests, unit tests, and property tests across the entire testing suite passed under pytest.
 - **CI/CD Fix (2026-05-18):** Resolved three broken package versions in `requirements.txt` (`pdfplumber`, `qdrant-client`) and dropped the Python runtime in workflows from `3.14` (pre-release, unavailable on GitHub runners) to `3.13` (latest stable LTS).
 
 ## Pinned Dependency Versions (Verified on PyPI)
@@ -57,6 +59,8 @@ The SEC Filing Multi-Hop RAG System is a full-stack AI financial research tool. 
 4. **Context Maintenance**: Keep `full_context.md` perfectly updated after completing any task.
 
 ## Next Immediate Task
-**Task 20: Write end-to-end query pipeline integration test**
-- Write `tests/test_integration.py` to exercise the full pipeline.
-- Test `classify_query` through `synthesize` using synthetic chunks covering all 20 tickers × 8 quarters.
+**Task 22: Implement ui/app.py — layout and sidebar**
+- Scaffold Streamlit app with two-column layout.
+- Build sidebar displaying corpus status, ticker coverage, and filing count.
+- Implement main panel query input and UI filter controls (ticker, date range, filing type).
+- Render structured citation badges inside the answer card.
