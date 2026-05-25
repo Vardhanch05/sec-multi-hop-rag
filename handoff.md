@@ -26,6 +26,7 @@ The SEC Filing Multi-Hop RAG System is a full-stack AI financial research tool. 
 - **Task 21:** Checkpoint — ensured all 47 component tests, unit tests, and property tests across the entire testing suite passed under pytest.
 - **Task 22:** Implement `ui/app.py` — layout and sidebar implemented.
 - **Task 23:** Implement contradiction cards and cold start polling in `ui/app.py` implemented.
+- **Task 24:** Implement RAGAS dashboard tab in `ui/app.py` implemented.
 - **CI/CD Fix (2026-05-18):** Resolved three broken package versions in `requirements.txt` (`pdfplumber`, `qdrant-client`) and dropped the Python runtime in workflows from `3.14` (pre-release, unavailable on GitHub runners) to `3.13` (latest stable LTS).
 
 ## Pinned Dependency Versions (Verified on PyPI)
@@ -61,7 +62,7 @@ The SEC Filing Multi-Hop RAG System is a full-stack AI financial research tool. 
 4. **Context Maintenance**: Keep `full_context.md` perfectly updated after completing any task.
 
 ## Next Immediate Task
-**Task 24: Implement RAGAS dashboard tab in ui/app.py**
-- Add RAGAS tab displaying four metric dials (faithfulness, answer relevance, context precision, context recall)
-- Add a trend chart of scores over time sourced from `ragas_results` table
-- Write unit test `test_ragas_dashboard_four_metrics`
+**Task 25: Implement evaluation/ragas_harness.py and evaluation/benchmark_questions.json**
+- Write 50 single-hop, 100 multi-hop, and 50 contradiction-specific questions in `benchmark_questions.json`.
+- Implement `ragas_harness.py` to run the 200-question benchmark against the query pipeline.
+- Write tests for RAGAS results persistence and question counts.

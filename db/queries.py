@@ -128,3 +128,26 @@ def get_all_tickers() -> list[str]:
         cursor = conn.execute(query)
         rows = cursor.fetchall()
         return [r["ticker"] for r in rows]
+
+def get_ragas_results() -> list[dict]:
+    """Returns all RAGAS evaluation results ordered by timestamp ascending."""
+    query = """
+        SELECT run_timestamp, faithfulness, answer_relevance, context_precision, context_recall, subset_breakdowns 
+        FROM ragas_results 
+        ORDER BY run_timestamp ASC
+    """
+    with get_connection() as conn:
+        cursor = conn.execute(query)
+        rows = cursor.fetchall()
+        
+    return [
+        {
+            "run_timestamp": r["run_timestamp"],
+            "faithfulness": r["faithfulness"],
+            "answer_relevance": r["answer_relevance"],
+            "context_precision": r["context_precision"],
+            "context_recall": r["context_recall"],
+            "subset_breakdowns": json.loads(r["subset_breakdowns"]) if r["subset_breakdowns"] else {}
+        }
+        for r in rows
+    ]

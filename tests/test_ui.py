@@ -65,3 +65,49 @@ def test_ui_timeout_notice_displayed():
         contradiction_detection_skipped=True
     )
     assert payload.contradiction_detection_skipped is True
+
+from db.queries import get_ragas_results
+from db.connection import get_connection
+import json
+from datetime import datetime
+import os
+import config.settings as settings
+
+def test_ragas_dashboard_four_metrics(tmp_path):
+    """
+    Validates Requirements 8.1, 8.2, 8.3
+    Asserts all four metrics are rendered by testing the data structure 
+    that the UI consumes.
+    """
+    # Seed a synthetic ragas_results row
+    original_url = settings.DATABASE_URL
+    test_db_path = tmp_path / "test_ragas_ui.db"
+    settings.DATABASE_URL = f"sqlite:///{test_db_path}"
+    
+    conn = get_connection()
+    schema_path = os.path.join(os.path.dirname(__file__), "..", "db", "schema.sql")
+    with open(schema_path, "r", encoding="utf-8") as f:
+        conn.executescript(f.read())
+    
+    # Insert synthetic row
+    conn.execute("""
+        INSERT INTO ragas_results (run_timestamp, faithfulness, answer_relevance, context_precision, context_recall, subset_breakdowns)
+        VALUES (?, ?, ?, ?, ?, ?)
+    """, (datetime.now().isoformat(), 0.9, 0.8, 0.7, 0.6, json.dumps({})))
+    conn.commit()
+    conn.close()
+    
+    # Test data retrieval logic for the dashboard
+    results = get_ragas_results()
+    assert len(results) == 1
+    
+    latest = results[-1]
+    assert "faithfulness" in latest
+    assert "answer_relevance" in latest
+    assert "context_precision" in latest
+    assert "context_recall" in latest
+    
+    assert latest["faithfulness"] == 0.9
+    
+    # Restore settings
+    settings.DATABASE_URL = original_url

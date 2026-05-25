@@ -7,8 +7,9 @@ Streamlit UI for SEC Multi-Hop RAG system.
 import streamlit as st
 import time
 import threading
+import pandas as pd
 
-from db.queries import get_corpus_stats, get_all_tickers
+from db.queries import get_corpus_stats, get_all_tickers, get_ragas_results
 from retrieval.query_classifier import classify_query, UIFilters
 from retrieval.hop_planner import plan_hops, get_available_periods
 from retrieval.retriever import retrieve_hops
@@ -82,85 +83,112 @@ def main():
     all_tickers = get_all_tickers()
     selected_tickers = st.sidebar.multiselect("Select Tickers", options=all_tickers)
     
-    # --- Main Panel ---
-    query = st.chat_input("Ask a question about SEC filings...")
+    tab1, tab2 = st.tabs(["Query Interface", "RAGAS Dashboard"])
     
-    if query:
-        st.chat_message("user").write(query)
+    with tab1:
+        # --- Main Panel ---
+        query = st.chat_input("Ask a question about SEC filings...")
         
-        with st.chat_message("assistant"):
-            result_container = {}
-            t = threading.Thread(target=process_query, args=(query, selected_tickers, all_tickers, result_container))
-            t.start()
+        if query:
+            st.chat_message("user").write(query)
             
-            status_container = st.empty()
-            
-            # Cold start polling
-            start_time = time.time()
-            show_loading = False
-            
-            while t.is_alive():
-                elapsed = time.time() - start_time
-                if elapsed > 120:
-                    status_container.error("Request timed out (120s limit).")
-                    return
-                elif elapsed > 5:
-                    if not show_loading:
-                        show_loading = True
-                    status_container.info(f"Processing query... (Elapsed: {int(elapsed)}s)")
+            with st.chat_message("assistant"):
+                result_container = {}
+                t = threading.Thread(target=process_query, args=(query, selected_tickers, all_tickers, result_container))
+                t.start()
                 
-                time.sleep(2)
+                status_container = st.empty()
                 
-            t.join()
-            status_container.empty()
-            
-            if "error" in result_container:
-                st.error(f"Error: {result_container['error']}")
-                return
+                # Cold start polling
+                start_time = time.time()
+                show_loading = False
                 
-            payload = result_container.get("payload")
-            if not payload:
-                st.error("Unknown error occurred.")
-                return
-            
-            # --- Render Results ---
-            st.write(payload.answer)
-            
-            if payload.contradiction_detection_skipped:
-                st.info("Notice: Contradiction detection was skipped due to NLI timeout.")
+                while t.is_alive():
+                    elapsed = time.time() - start_time
+                    if elapsed > 120:
+                        status_container.error("Request timed out (120s limit).")
+                        return
+                    elif elapsed > 5:
+                        if not show_loading:
+                            show_loading = True
+                        status_container.info(f"Processing query... (Elapsed: {int(elapsed)}s)")
+                    
+                    time.sleep(2)
+                    
+                t.join()
+                status_container.empty()
                 
-            if payload.contradictions:
-                st.write("### Contradictions Detected in Filings")
-                for i, c in enumerate(payload.contradictions, 1):
-                    color = contradiction_card_color(c.confidence_score)
-                    if color:
-                        st.markdown(
-                            f"""
-                            <div style="background-color: {color}; padding: 15px; border-radius: 5px; margin-bottom: 10px; color: white;">
-                                <h4>Contradiction {i} (Confidence: {c.confidence_score:.2f})</h4>
-                                <div style="display: flex; gap: 20px;">
-                                    <div style="flex: 1;">
-                                        <strong>{c.filing_ref_a}</strong><br/>
-                                        {c.claim_a}
-                                    </div>
-                                    <div style="flex: 1;">
-                                        <strong>{c.filing_ref_b}</strong><br/>
-                                        {c.claim_b}
-                                    </div>
-                                </div>
-                            </div>
-                            """,
-                            unsafe_allow_html=True
-                        )
-            
-            if payload.citations:
-                st.write("### Citations")
-                cols = st.columns(4)
-                for i, cit in enumerate(payload.citations):
-                    with cols[i % 4]:
-                        st.caption(f"🛡️ {cit.ticker} {cit.fiscal_year} {cit.filing_type} ({cit.section})")
+                if "error" in result_container:
+                    st.error(f"Error: {result_container['error']}")
+                else:
+                    payload = result_container.get("payload")
+                    if not payload:
+                        st.error("Unknown error occurred.")
+                    else:
+                        # --- Render Results ---
+                        st.write(payload.answer)
                         
-            st.caption(f"⏱️ Latency: {payload.latency_ms}ms | 🤖 Model: {payload.model_used}")
+                        if payload.contradiction_detection_skipped:
+                            st.info("Notice: Contradiction detection was skipped due to NLI timeout.")
+                            
+                        if payload.contradictions:
+                            st.write("### Contradictions Detected in Filings")
+                            for i, c in enumerate(payload.contradictions, 1):
+                                color = contradiction_card_color(c.confidence_score)
+                                if color:
+                                    st.markdown(
+                                        f"""
+                                        <div style="background-color: {color}; padding: 15px; border-radius: 5px; margin-bottom: 10px; color: white;">
+                                            <h4>Contradiction {i} (Confidence: {c.confidence_score:.2f})</h4>
+                                            <div style="display: flex; gap: 20px;">
+                                                <div style="flex: 1;">
+                                                    <strong>{c.filing_ref_a}</strong><br/>
+                                                    {c.claim_a}
+                                                </div>
+                                                <div style="flex: 1;">
+                                                    <strong>{c.filing_ref_b}</strong><br/>
+                                                    {c.claim_b}
+                                                </div>
+                                            </div>
+                                        </div>
+                                        """,
+                                        unsafe_allow_html=True
+                                    )
+                        
+                        if payload.citations:
+                            st.write("### Citations")
+                            cols = st.columns(4)
+                            for i, cit in enumerate(payload.citations):
+                                with cols[i % 4]:
+                                    st.caption(f"🛡️ {cit.ticker} {cit.fiscal_year} {cit.filing_type} ({cit.section})")
+                                    
+                        st.caption(f"⏱️ Latency: {payload.latency_ms}ms | 🤖 Model: {payload.model_used}")
+
+    with tab2:
+        st.header("Evaluation Metrics")
+        results = get_ragas_results()
+        
+        if not results:
+            st.info("No RAGAS evaluation results found in the database. Run the evaluation harness to see metrics.")
+        else:
+            latest = results[-1]
+            st.write(f"**Latest Evaluation:** {latest['run_timestamp']}")
+            
+            c1, c2, c3, c4 = st.columns(4)
+            c1.metric("Faithfulness", f"{latest['faithfulness']:.2f}")
+            c2.metric("Answer Relevance", f"{latest['answer_relevance']:.2f}")
+            c3.metric("Context Precision", f"{latest['context_precision']:.2f}")
+            c4.metric("Context Recall", f"{latest['context_recall']:.2f}")
+            
+            st.write("### Trend Over Time")
+            df = pd.DataFrame(results)
+            # Parse datetime string to ensure proper plotting
+            df['run_timestamp'] = pd.to_datetime(df['run_timestamp'])
+            df.set_index('run_timestamp', inplace=True)
+            
+            # Select only the metrics for the chart
+            chart_data = df[['faithfulness', 'answer_relevance', 'context_precision', 'context_recall']]
+            st.line_chart(chart_data)
 
 if __name__ == "__main__":
     main()
