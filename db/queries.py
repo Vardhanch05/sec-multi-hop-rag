@@ -110,3 +110,21 @@ def write_ragas_result(result: RagasResult) -> None:
             json.dumps(result.subset_breakdowns)
         ))
         conn.commit()
+
+def get_corpus_stats() -> dict:
+    """Returns total filings and unique tickers count for the UI."""
+    query = "SELECT count(distinct ticker) as unique_tickers, count(*) as total_filings FROM filings"
+    with get_connection() as conn:
+        cursor = conn.execute(query)
+        row = cursor.fetchone()
+        if row:
+            return {"unique_tickers": row["unique_tickers"], "total_filings": row["total_filings"]}
+        return {"unique_tickers": 0, "total_filings": 0}
+
+def get_all_tickers() -> list[str]:
+    """Returns a sorted list of all unique tickers in the database."""
+    query = "SELECT DISTINCT ticker FROM filings ORDER BY ticker"
+    with get_connection() as conn:
+        cursor = conn.execute(query)
+        rows = cursor.fetchall()
+        return [r["ticker"] for r in rows]
