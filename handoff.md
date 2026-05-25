@@ -24,6 +24,8 @@ The SEC Filing Multi-Hop RAG System is a full-stack AI financial research tool. 
 - **Task 19:** Answer Synthesizer (`synthesis/answer_synthesizer.py`) implemented with Groq API integration, citation formatting, contradiction propagation, and RateLimitError fallback handling.
 - **Task 20:** End-to-end query pipeline integration test (`tests/test_integration.py`) implemented, asserting 160 multi-hop combination retrieval operations execute completely.
 - **Task 21:** Checkpoint — ensured all 47 component tests, unit tests, and property tests across the entire testing suite passed under pytest.
+- **Task 22:** Implement `ui/app.py` — layout and sidebar implemented.
+- **Task 23:** Implement contradiction cards and cold start polling in `ui/app.py` implemented.
 - **CI/CD Fix (2026-05-18):** Resolved three broken package versions in `requirements.txt` (`pdfplumber`, `qdrant-client`) and dropped the Python runtime in workflows from `3.14` (pre-release, unavailable on GitHub runners) to `3.13` (latest stable LTS).
 
 ## Pinned Dependency Versions (Verified on PyPI)
@@ -59,8 +61,7 @@ The SEC Filing Multi-Hop RAG System is a full-stack AI financial research tool. 
 4. **Context Maintenance**: Keep `full_context.md` perfectly updated after completing any task.
 
 ## Next Immediate Task
-**Task 22: Implement ui/app.py — layout and sidebar**
-- Scaffold Streamlit app with two-column layout.
-- Build sidebar displaying corpus status, ticker coverage, and filing count.
-- Implement main panel query input and UI filter controls (ticker, date range, filing type).
-- Render structured citation badges inside the answer card.
+**Task 24: Implement RAGAS dashboard tab in ui/app.py**
+- Add RAGAS tab displaying four metric dials (faithfulness, answer relevance, context precision, context recall)
+- Add a trend chart of scores over time sourced from `ragas_results` table
+- Write unit test `test_ragas_dashboard_four_metrics`
