@@ -14,7 +14,7 @@ An AI-powered financial research tool that enables analysts to ask complex, temp
 ## Setup
 
 ```bash
-git clone <repo-url>
+git clone https://github.com/Vardhanch05/sec-multi-hop-rag
 cd sec-rag-system
 python -m venv venv
 source venv/bin/activate  # Windows: venv\Scripts\activate
