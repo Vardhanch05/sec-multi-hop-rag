@@ -2,13 +2,12 @@
 
 An AI-powered financial research tool that enables analysts to ask complex, temporally-aware questions across multiple SEC EDGAR quarterly and annual filings and receive grounded, cited answers — with automatic NLI-based contradiction detection.
 
-> **Live Demo**: _coming soon_
 
 ---
 
 ## Architecture
 
-<!-- Mermaid diagram will be added in task 27 -->
+![System Architecture](assets/SEC_architecture.png)
 
 ---
 
