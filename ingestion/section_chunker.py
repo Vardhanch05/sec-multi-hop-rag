@@ -18,22 +18,26 @@ class Chunk:
     filing_date: date
     accession_number: str
     source_url: str
+    period_end_date: date | None = None
 
     def to_json(self) -> str:
         d = self.__dict__.copy()
         d['filing_date'] = d['filing_date'].isoformat()
+        if d['period_end_date']:
+            d['period_end_date'] = d['period_end_date'].isoformat()
         return json.dumps(d)
 
     @classmethod
     def from_json(cls, json_str: str) -> "Chunk":
         d = json.loads(json_str)
         d['filing_date'] = date.fromisoformat(d['filing_date'])
+        if d.get('period_end_date'):
+            d['period_end_date'] = date.fromisoformat(d['period_end_date'])
         return cls(**d)
 
 PATTERNS = {
-    "MD&A": re.compile(r"(?i)(item\s+2\.?\s*management.{0,30}discussion)"),
+    "MD&A": re.compile(r"(?i)(item\s+[27]\.?\s*management.{0,30}discussion)"),
     "Risk Factors": re.compile(r"(?i)(item\s+1a\.?\s*risk\s+factors)"),
-    "Forward Guidance": re.compile(r"(?i)(forward[- ]looking\s+statements?|outlook|guidance)"),
     "Financial Statements": re.compile(r"(?i)(item\s+[18]\.?\s*(financial\s+statements|quantitative))")
 }
 
@@ -88,7 +92,7 @@ def chunk_filing(text: str, filing_ref: FilingRef) -> List[Chunk]:
         if not sec_text_clean:
             continue
             
-        text_chunks = chunk_text_by_tokens(sec_text_clean, chunk_size=1000, overlap=200)
+        text_chunks = chunk_text_by_tokens(sec_text_clean, chunk_size=200, overlap=40)
         for tc in text_chunks:
             chunks.append(Chunk(
                 text=tc,
@@ -100,8 +104,10 @@ def chunk_filing(text: str, filing_ref: FilingRef) -> List[Chunk]:
                 chunk_index=chunk_index,
                 filing_date=filing_ref.filing_date,
                 accession_number=filing_ref.accession_number,
-                source_url=filing_ref.source_url
+                source_url=filing_ref.source_url,
+                period_end_date=filing_ref.period_end_date
             ))
             chunk_index += 1
             
     return chunks
+

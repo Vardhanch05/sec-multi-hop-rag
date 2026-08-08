@@ -36,8 +36,8 @@ FALLBACK_LLM: str = os.getenv("FALLBACK_LLM", "llama-3.1-8b-instant")
 #   Capped at 50 → 10–20s on CPU, safely within the 30s timeout
 # ---------------------------------------------------------------------------
 CONTRADICTION_THRESHOLD: float = float(os.getenv("CONTRADICTION_THRESHOLD", "0.75"))
-NLI_TIMEOUT_SECONDS: float = float(os.getenv("NLI_TIMEOUT_SECONDS", "30.0"))
-MAX_NLI_PAIRS: int = int(os.getenv("MAX_NLI_PAIRS", "50"))
+NLI_TIMEOUT_SECONDS: float = float(os.getenv("NLI_TIMEOUT_SECONDS", "60.0"))
+MAX_NLI_PAIRS: int = int(os.getenv("MAX_NLI_PAIRS", "15"))
 
 # ---------------------------------------------------------------------------
 # Vector store — ChromaDB (dev) or Qdrant Cloud (prod)
@@ -46,7 +46,14 @@ MAX_NLI_PAIRS: int = int(os.getenv("MAX_NLI_PAIRS", "50"))
 VECTOR_STORE_BACKEND: str = os.getenv("VECTOR_STORE_BACKEND", "chromadb")
 QDRANT_URL: str = os.getenv("QDRANT_URL", "")
 QDRANT_API_KEY: str = os.getenv("QDRANT_API_KEY", "")
-CHROMA_PERSIST_DIR: str = os.getenv("CHROMA_PERSIST_DIR", "./chroma_db")
+_chroma_dir: str = os.getenv("CHROMA_PERSIST_DIR", "./chroma_db")
+
+# Ensure CHROMA_PERSIST_DIR is relative to the project root, not CWD
+if not os.path.isabs(_chroma_dir):
+    _project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
+    CHROMA_PERSIST_DIR: str = os.path.join(_project_root, _chroma_dir)
+else:
+    CHROMA_PERSIST_DIR: str = _chroma_dir
 
 # ---------------------------------------------------------------------------
 # Relational database — SQLite (dev) or PostgreSQL (prod)

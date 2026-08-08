@@ -23,6 +23,11 @@ def get_connection():
         # Convert 'sqlite:///./sec_rag.db' to './sec_rag.db'
         db_path = settings.DATABASE_URL.replace("sqlite:///", "")
         
+        # Ensure relative paths are relative to the project root, not the current working directory
+        if not os.path.isabs(db_path):
+            project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
+            db_path = os.path.join(project_root, db_path)
+        
         # Ensure directory exists if it's nested
         dir_name = os.path.dirname(db_path)
         if dir_name:

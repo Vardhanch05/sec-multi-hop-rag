@@ -32,6 +32,10 @@ class ChromaStore(VectorStore):
         if meta.get('quarter') is None:
             meta['quarter'] = ""
         meta['filing_date'] = meta['filing_date'].isoformat()
+        if meta.get('period_end_date'):
+            meta['period_end_date'] = meta['period_end_date'].isoformat()
+        else:
+            meta['period_end_date'] = ""
         return meta
 
     def insert_chunks(self, chunks: List[Chunk], embeddings: List[List[float]]):
@@ -104,6 +108,10 @@ class QdrantBackendStore(VectorStore):
         if meta.get('quarter') is None:
             meta['quarter'] = ""
         meta['filing_date'] = meta['filing_date'].isoformat()
+        if meta.get('period_end_date'):
+            meta['period_end_date'] = meta['period_end_date'].isoformat()
+        else:
+            meta['period_end_date'] = ""
         return meta
 
     def insert_chunks(self, chunks: List[Chunk], embeddings: List[List[float]]):

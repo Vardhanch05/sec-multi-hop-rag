@@ -12,7 +12,9 @@ from db.connection import get_connection
 from ingestion.edgar_client import FilingRef
 from retrieval.hop_planner import FilingPeriod
 from contradiction.contradiction_report import ContradictionEvent
-from evaluation.ragas_harness import RagasResult
+from typing import TYPE_CHECKING
+if TYPE_CHECKING:
+    from evaluation.ragas_harness import RagasResult
 
 def get_filing_periods_for_ticker(ticker: str) -> list[FilingPeriod]:
     """Queries the filings table and returns typed FilingPeriod objects."""
@@ -94,20 +96,21 @@ def insert_contradiction_event(event: ContradictionEvent) -> None:
         ))
         conn.commit()
 
-def write_ragas_result(result: RagasResult) -> None:
+def write_ragas_result(result: 'RagasResult') -> None:
     """Inserts a row into ragas_results."""
     query = """
-        INSERT INTO ragas_results (run_timestamp, faithfulness, answer_relevance, context_precision, context_recall, subset_breakdowns)
-        VALUES (?, ?, ?, ?, ?, ?)
+        INSERT INTO ragas_results (run_timestamp, faithfulness, answer_relevance, context_precision, context_recall, subset_breakdowns, is_mock)
+        VALUES (?, ?, ?, ?, ?, ?, ?)
     """
     with get_connection() as conn:
         conn.execute(query, (
             result.run_timestamp.isoformat() if hasattr(result.run_timestamp, 'isoformat') else result.run_timestamp,
             result.faithfulness,
-            result.answer_relevance,
+            result.answer_relevancy if hasattr(result, 'answer_relevancy') else result.answer_relevance,
             result.context_precision,
             result.context_recall,
-            json.dumps(result.subset_breakdowns)
+            json.dumps(result.subset_breakdowns),
+            result.is_mock
         ))
         conn.commit()
 
@@ -132,7 +135,7 @@ def get_all_tickers() -> list[str]:
 def get_ragas_results() -> list[dict]:
     """Returns all RAGAS evaluation results ordered by timestamp ascending."""
     query = """
-        SELECT run_timestamp, faithfulness, answer_relevance, context_precision, context_recall, subset_breakdowns 
+        SELECT run_timestamp, faithfulness, answer_relevance, context_precision, context_recall, subset_breakdowns, is_mock 
         FROM ragas_results 
         ORDER BY run_timestamp ASC
     """
@@ -147,7 +150,8 @@ def get_ragas_results() -> list[dict]:
             "answer_relevance": r["answer_relevance"],
             "context_precision": r["context_precision"],
             "context_recall": r["context_recall"],
-            "subset_breakdowns": json.loads(r["subset_breakdowns"]) if r["subset_breakdowns"] else {}
+            "subset_breakdowns": json.loads(r["subset_breakdowns"]) if r["subset_breakdowns"] else {},
+            "is_mock": bool(r["is_mock"])
         }
         for r in rows
     ]

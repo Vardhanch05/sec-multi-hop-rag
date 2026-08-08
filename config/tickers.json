@@ -1,24 +1,7 @@
 {
   "tickers": [
-    "AAPL",
-    "MSFT",
-    "GOOGL",
-    "AMZN",
-    "META",
-    "NVDA",
-    "TSLA",
-    "JPM",
-    "BAC",
-    "GS",
-    "JNJ",
-    "PFE",
-    "UNH",
-    "XOM",
-    "CVX",
-    "WMT",
-    "HD",
-    "V",
-    "MA",
-    "NFLX"
+    "AAPL", "MSFT", "GOOGL", "AMZN", "META",
+    "NVDA", "TSLA", "JPM", "JNJ", "PFE", 
+    "UNH", "XOM", "CVX", "NFLX"
   ]
 }

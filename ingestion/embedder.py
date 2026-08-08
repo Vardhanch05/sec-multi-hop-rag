@@ -1,6 +1,8 @@
 from sentence_transformers import SentenceTransformer
 from typing import List
 
+from functools import lru_cache
+
 _model = None
 
 def _get_model() -> SentenceTransformer:
@@ -10,6 +12,7 @@ def _get_model() -> SentenceTransformer:
         _model = SentenceTransformer('all-MiniLM-L6-v2')
     return _model
 
+@lru_cache(maxsize=1024)
 def embed_query(text: str) -> List[float]:
     """
     Embeds a single query string for retrieval.
@@ -18,6 +21,7 @@ def embed_query(text: str) -> List[float]:
     model = _get_model()
     embedding = model.encode(text, convert_to_numpy=True)
     return embedding.tolist()
+
 
 def embed_chunks(texts: List[str]) -> List[List[float]]:
     """
