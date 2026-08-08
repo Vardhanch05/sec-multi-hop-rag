@@ -1,0 +1,55 @@
+# SEC Multi-Hop RAG System - Run Instructions
+
+This guide provides step-by-step instructions on how to set up the environment, run the ingestion pipeline, and launch the user interface.
+
+## 1. Environment Setup
+
+Before running anything, ensure your virtual environment is active and dependencies are installed.
+
+Open PowerShell in the `sec-rag-system` directory and run:
+
+```powershell
+# Activate the virtual environment
+.\venv\Scripts\activate
+
+# (Optional) If dependencies are missing, install them:
+pip install -r requirements.txt
+```
+
+## 2. Configuration
+
+Make sure your environment variables are configured.
+1. Copy `.env.example` to `.env`.
+2. Fill in the required API keys (specifically `GROQ_API_KEY`).
+3. If running locally, SQLite and ChromaDB will be used by default (no extra configuration needed).
+
+## 3. Running the Streamlit UI
+
+The main interface for querying the system and viewing the RAGAS evaluation dashboard is built with Streamlit.
+
+From the `sec-rag-system` directory, run:
+
+```powershell
+# Make sure your virtual environment is active, then run:
+streamlit run ui/app.py
+```
+This will start a local web server. A browser window should automatically open pointing to `http://localhost:8501`.
+
+## 4. Running the Data Ingestion Pipeline
+
+If you need to fetch new filings from SEC EDGAR and process them into the vector database manually, run the ingestion pipeline script:
+
+```powershell
+python -m ingestion.pipeline
+```
+Note: In production, this runs automatically via a GitHub Actions cron job.
+
+## 5. Running the Test Suite
+
+To verify that the system is functioning correctly (unit tests, integration tests, and property-based tests):
+
+```powershell
+pytest tests/
+```
+
+*(Note: Ensure you have no syntax errors or missing dependencies, like `blinker` for Streamlit, when running the tests).*

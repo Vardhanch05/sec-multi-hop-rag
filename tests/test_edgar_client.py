@@ -11,7 +11,7 @@ from pathlib import Path
 from hypothesis import given, settings
 import hypothesis.strategies as st
 
-from ingestion.edgar_client import get_new_filings, FilingRef, download_filing_pdf, DownloadError
+from ingestion.edgar_client import get_new_filings, FilingRef, fetch_filing_text, DownloadError
 
 # Feature: sec-rag-system, Property 4: Incremental ingestion only fetches new filings
 @given(since_date=st.dates(min_value=date(2000, 1, 1), max_value=date(2025, 1, 1)))
@@ -36,26 +36,19 @@ def test_incremental_fetch_date_filter(since_date):
         for f in new_filings:
             assert f.filing_date > since_date
 
-def test_download_failure_logs_and_continues(tmp_path):
+def test_fetch_failure_logs_and_continues():
     """
     Validates: Requirements 1.6
-    Ensures a DownloadError is raised after retries are exhausted.
+    Ensures a DownloadError is raised when text cannot be fetched.
     """
-    filing = FilingRef("AAPL", "10-Q", "001", date(2024, 1, 1), "http://invalid-url.com/fail.pdf", "Q1", 2024)
-    dest = tmp_path / "test.pdf"
+    filing = FilingRef("AAPL", "10-Q", "001", date(2024, 1, 1), "http://example.com/fail", "Q1", 2024)
     
     # We don't want the deduplication check to skip the download in the test
     with patch("db.queries.filing_exists", return_value=False):
-        # We mock requests.get to always raise an exception
-        import requests
-        with patch("ingestion.edgar_client.requests.get") as mock_get:
-            mock_get.side_effect = requests.RequestException("Network error")
+        # We mock Company to raise an exception
+        with patch("ingestion.edgar_client.Company") as mock_company:
+            mock_instance = mock_company.return_value
+            mock_instance.get_filings.side_effect = Exception("Network error")
             
-            # Use retries=1 so the test is fast
             with pytest.raises(DownloadError):
-                # Also mock sleep to speed up the test
-                with patch("time.sleep"):
-                    download_filing_pdf(filing, dest, retries=1)
-            
-            # Ensure it tried (retries + 1) times
-            assert mock_get.call_count == 2
+                fetch_filing_text(filing)

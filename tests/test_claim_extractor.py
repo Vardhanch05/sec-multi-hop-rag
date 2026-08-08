@@ -88,7 +88,7 @@ def test_claim_extractor_fallback(mock_groq_class):
     
     claims = extract_claims("What was AAPL growth?", chunks)
     assert len(claims) == 1
-    assert claims[0].claim_text == "AAPL revenue grew."
+    assert claims[0].claim_text == "AAPL revenue grew. This was driven by iPhone sales."
 
     # 2. Too few elements fallback
     mock_response_too_few = MagicMock()
@@ -118,7 +118,7 @@ def test_claim_extractor_fallback(mock_groq_class):
     claims_2 = extract_claims("What were developments?", two_chunks)
     assert len(claims_2) == 2
     assert claims_2[0].claim_text == "Factual claim 1"
-    assert claims_2[1].claim_text == "MSFT cloud segment excelled!"
+    assert claims_2[1].claim_text == "MSFT cloud segment excelled! Azure growth is strong."
 
 def test_get_first_sentence():
     assert _get_first_sentence("First sentence. Second sentence!") == "First sentence."

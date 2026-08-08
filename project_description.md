@@ -40,7 +40,7 @@ During the continuous integration and deployment phase, automated GitHub Actions
 - **Embeddings:** `sentence-transformers/all-MiniLM-L6-v2`
 - **Vector Database:** ChromaDB (Development) / Qdrant Cloud (Production)
 - **Relational Database:** SQLite (Development) / PostgreSQL (Production)
-- **PDF Extraction:** `pdfplumber`
+- **Filing Extraction:** `edgartools`
 - **Backend API:** FastAPI
 - **Frontend / UI:** Streamlit
 - **Testing:** `pytest` + `hypothesis`

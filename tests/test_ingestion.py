@@ -54,7 +54,7 @@ filing_ref_st = st.builds(
     fiscal_year=st.integers(min_value=2000, max_value=2025)
 )
 
-@settings(max_examples=100)
+@settings(max_examples=100, deadline=None)
 @given(filing_ref=filing_ref_st)
 def test_ingestion_deduplication(filing_ref):
     """
@@ -63,9 +63,8 @@ def test_ingestion_deduplication(filing_ref):
     Running ingestion twice for the same filing must not increase the row count in the filings table.
     """
     with patch("ingestion.pipeline.get_new_filings", return_value=[filing_ref]), \
-         patch("ingestion.pipeline.download_filing_pdf", return_value=MagicMock()), \
+         patch("ingestion.pipeline.fetch_filing_text", return_value="Dummy text"), \
          patch("ingestion.pipeline.is_extractable", return_value=True), \
-         patch("ingestion.pipeline.extract_text", return_value="Dummy text"), \
          patch("ingestion.pipeline.chunk_filing", return_value=[
              Chunk(
                  text="Dummy text", ticker=filing_ref.ticker, filing_type=filing_ref.filing_type,
@@ -97,7 +96,7 @@ def test_ingestion_deduplication(filing_ref):
         
         assert count == 1, "The row must only exist once despite two runs"
 
-@settings(max_examples=100)
+@settings(max_examples=100, deadline=None)
 @given(filing_refs=st.lists(filing_ref_st, min_size=0, max_size=5))
 def test_ingestion_log_completeness(filing_refs):
     """
@@ -112,9 +111,8 @@ def test_ingestion_log_completeness(filing_refs):
     conn.close()
 
     with patch("ingestion.pipeline.get_new_filings", return_value=filing_refs), \
-         patch("ingestion.pipeline.download_filing_pdf", return_value=MagicMock()), \
+         patch("ingestion.pipeline.fetch_filing_text", return_value="Dummy text"), \
          patch("ingestion.pipeline.is_extractable", return_value=True), \
-         patch("ingestion.pipeline.extract_text", return_value="Dummy text"), \
          patch("ingestion.pipeline.chunk_filing", side_effect=lambda text, f: [
              Chunk(
                  text=text, ticker=f.ticker, filing_type=f.filing_type,

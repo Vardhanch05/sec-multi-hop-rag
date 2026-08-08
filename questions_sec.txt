@@ -1,0 +1,65 @@
+# SEC RAG Benchmark & Modeling Questions (55 Questions)
+# These questions are designed to test Single-Hop, Multi-Hop, and Contradiction Retrieval in SEC Filings.
+
+## Part 1: Single-Hop Factual Queries (Direct Retrieval)
+1. What was Apple's total net sales for the fiscal year ended September 30, 2023?
+2. How much did Microsoft report in Cloud Revenue for Q3 2023?
+3. What is the stated par value of Tesla's common stock as of their latest 10-K?
+4. Who is listed as the independent registered public accounting firm for Alphabet Inc. in 2023?
+5. What was Amazon's total operating income for the North America segment in Q4 2023?
+6. How many full-time employees did Meta Platforms report having at the end of fiscal year 2023?
+7. What was the total amount of cash and cash equivalents held by Nvidia as of January 28, 2024?
+8. Did Netflix report any material changes to their risk factors in their Q2 2023 10-Q?
+9. What was the total research and development (R&D) expense for Pfizer in 2023?
+10. How much debt did Chevron issue during the fiscal year 2023?
+11. What is the effective tax rate reported by Pfizer for the first quarter of 2024?
+12. What was the total revenue for Google's Google Cloud segment in 2023?
+13. How much did Johnson & Johnson spend on sales, marketing, and administrative expenses in Q1 2024?
+14. What are the primary products listed in Nvidia's Data Center segment?
+15. What was the basic earnings per share (EPS) for UnitedHealth in fiscal year 2024?
+
+## Part 2: Multi-Hop & Comparative Queries (Cross-Quarter/Cross-Entity)
+16. How did Apple's iPhone revenue in Q4 2024 compare to iPhone revenue in Q4 2023?
+17. What was the year-over-year percentage growth in Microsoft's Azure revenue from Q1 2023 to Q1 2024?
+18. Compare the total R&D spending of Alphabet and Meta Platforms for the fiscal year 2023.
+19. Did Tesla's automotive gross margin increase or decrease between Q2 2023 and Q3 2023, and by how much?
+20. What was the sequential change in Amazon's AWS operating income from Q2 2023 to Q3 2023?
+21. Contrast the primary risk factors related to artificial intelligence mentioned in Microsoft's 10-K versus Google's (Alphabet) 10-K.
+22. How much did Nvidia's Data Center revenue grow from fiscal year 2023 to fiscal year 2024?
+23. What were the total dividends paid by JPMorgan Chase in 2023 compared to 2024?
+24. How did the operating margin of Amazon's North America segment compare to its International segment in Q4 2023?
+25. Did Netflix's total global streaming paid memberships grow more in Q1 2024 or Q4 2023?
+26. Compare the total capital expenditures of ExxonMobil and Chevron for the fiscal year 2023.
+27. How much did total operating expenses change for Netflix from Q3 2023 to Q3 2024?
+28. What was the difference in total liabilities reported by JPMorgan Chase at the end of 2023 versus the end of 2024?
+29. Did Tesla's vehicle deliveries increase or decrease YoY in Q2 2023, and what was the impact on automotive revenues?
+30. How did the revenue composition (Products vs Services) change for Apple between 2023 and 2024?
+
+## Part 3: Qualitative, Risk Factors & MD&A Queries
+31. What are the primary cybersecurity risks disclosed by Apple in their 2023 10-K?
+32. How does Johnson & Johnson describe the impact of foreign currency exchange rate fluctuations on their 2023 net revenues?
+33. What supply chain disruptions did Tesla identify as material risks in their latest 10-Q?
+34. Summarize the management's discussion regarding the impact of inflation on Amazon's operating costs in 2023.
+35. What environmental and regulatory risks does ExxonMobil list regarding greenhouse gas emissions?
+36. How does Netflix define its global streaming paid memberships metric?
+37. What does Microsoft cite as the primary drivers for their commercial revenue growth in Q3 2023?
+38. Summarize the pending litigation or legal proceedings disclosed by Pfizer in their 2023 10-K.
+39. How does Meta Platforms plan to utilize their capital expenditures according to their Q1 2024 MD&A?
+40. What risks does JPMorgan Chase disclose regarding regulatory actions by the SEC?
+41. Describe the impact of interest rate changes on JPMorgan Chase's net interest income in 2023.
+42. What are the key factors driving the gross margin expansion mentioned in Alphabet's 2023 annual report?
+43. How does Chevron describe their commodity price hedging strategy in their recent filings?
+44. What restructuring initiatives did UnitedHealth announce in their Q4 2023 earnings report?
+45. Summarize the competitive risks mentioned by Nvidia in their 2023 10-K.
+
+## Part 4: Guidance, Forward-Looking & Contradiction Queries
+46. Did management provide specific revenue guidance for Q2 2024 in the Q1 2024 10-Q, and does it align with previous statements?
+47. Did the CEO's statement about supply chain normalization in Q1 contradict the risk factors listed in the Q2 10-Q regarding component shortages?
+48. In 2023, Apple stated they would halt stock repurchases, but did they report repurchasing stock in the 2024 10-K?
+49. Compare the projected capital expenditure for 2024 mentioned in the Q3 2023 filing versus the actual capital expenditure guidance in the 2023 10-K.
+50. Did Apple's stated goal of achieving carbon neutrality by 2030 change between their 2023 and 2024 filings?
+51. Is there a discrepancy between the reported restructuring costs in the Q2 10-Q and the cumulative restructuring costs reported in the year-end 10-K?
+52. Did the management's discussion on international expansion plans in Q1 match the actions reported in the Q3 filing?
+53. In the 2023 10-K, Apple cited a specific competitor as their main threat. Was this changed or updated in the 2024 10-K?
+54. Did the projected timeline for the new manufacturing facility completion change between the Q1 2023 and Q4 2023 filings?
+55. How did the company's outlook on consumer spending change from the first half of 2023 to the second half?

@@ -37,11 +37,12 @@ def test_retriever_hop_count_and_filters(mock_embed, mock_get_store, hop_specs):
 
     # Assert exactly unique N queries were returned
     assert len(results) == len(set(hop_specs))
-    assert mock_store.search.call_count == len(hop_specs)
+    expected_calls = len(hop_specs) + sum(1 for spec in hop_specs if spec.section_type)
+    assert mock_store.search.call_count == expected_calls
 
     # Verify that each HopSpec had a corresponding vector store search call with the correct filters
     calls = mock_store.search.call_args_list
-    assert len(calls) == len(hop_specs)
+    assert len(calls) == expected_calls
     
     for spec in hop_specs:
         expected_quarter = spec.quarter if spec.quarter is not None else ""
@@ -107,6 +108,9 @@ def test_section_type_filter_enforcement(mock_embed, mock_get_store, hop_spec):
                 assert chunk.section_type == spec.section_type
 
 # Feature: sec-rag-system, Property 19: UI filter propagation to hop specs
+# NOTE: The available_periods mocked in these tests assume data is already natively
+# stored in Fiscal format. `ingestion/edgar_client.py` is the source of truth 
+# for all calendar-to-fiscal mapping during ingestion.
 @given(
     ui_filing_type=st.sampled_from(["10-Q", "10-K", None]),
     ui_tickers=st.lists(st.text(min_size=1, max_size=5).map(lambda s: s.upper()), min_size=0, max_size=3)
@@ -138,7 +142,7 @@ def test_ui_filter_propagation(ui_filing_type, ui_tickers):
         requires_contradiction_check=False
     )
     
-    if not filtered_avail and periods:
+    if not filtered_avail:
         with pytest.raises(HopResolutionError):
             plan_hops(plan, available)
     else:
@@ -156,3 +160,61 @@ def test_results_from_sec_chunks_collection(monkeypatch):
     
     store = get_vector_store()
     assert store.collection.name == "sec_chunks"
+
+def test_retrieve_hops_fallback_logic():
+    from retrieval.retriever import retrieve_hops
+    from unittest.mock import patch, MagicMock
+    
+    hop_spec = HopSpec(
+        ticker="AAPL",
+        quarter="Q1",
+        fiscal_year=2023,
+        filing_type="10-Q",
+        section_type="MD&A"
+    )
+    
+    with patch('retrieval.retriever.get_vector_store') as mock_get_store, \
+         patch('retrieval.retriever.embed_query') as mock_embed:
+        
+        mock_embed.return_value = [0.1] * 384
+        mock_store = MagicMock()
+        mock_get_store.return_value = mock_store
+        
+        mock_chunks = [
+            {
+                "text": f"fallback test {i}",
+                "ticker": "AAPL",
+                "filing_type": "10-Q",
+                "quarter": "Q1",
+                "fiscal_year": 2023,
+                "section_type": "Financial Statements", # Different from requested section
+                "chunk_index": i,
+                "filing_date": "2023-01-01",
+                "accession_number": "123",
+                "source_url": "http",
+                "score": 0.9 - (i * 0.1)
+            } for i in range(5)
+        ]
+        
+        # Mock side effect: first call returns 0 chunks, second call returns 5 chunks
+        mock_store.search.side_effect = [
+            [],          # first call: section_filter applied -> 0 results
+            mock_chunks  # second call: no filter -> >=5 results
+        ]
+        
+        results = retrieve_hops("test query", [hop_spec])
+        
+        assert mock_store.search.call_count == 2
+        
+        # Verify first call had the section filter
+        first_call_args = mock_store.search.call_args_list[0][1]
+        assert first_call_args["filters"]["section_type"] == "MD&A"
+        
+        # Verify second call had no section filter
+        second_call_args = mock_store.search.call_args_list[1][1]
+        assert "section_type" not in second_call_args["filters"]
+        
+        # Verify the chunks returned are from the second call
+        retrieved_chunks = results[hop_spec]
+        assert len(retrieved_chunks) == 5
+        assert retrieved_chunks[0].text == "fallback test 0"

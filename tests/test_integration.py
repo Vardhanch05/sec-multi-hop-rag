@@ -69,7 +69,10 @@ def test_corpus_scale_20_tickers_8_quarters(setup_db, setup_vector_store):
     chunks_to_insert = []
     embeddings = []
     idx = 0
-    
+    # NOTE: We insert these synthetic filings using their Fiscal Period labels natively
+    # (e.g. Q1 2023). This matches how the application stores records in production,
+    # meaning this test successfully simulates the ingestion data without needing to mock
+    # out-of-bounds historical calendar years (like 2022).
     for ticker in TICKERS:
         for year in YEARS:
             for q in QUARTERS:

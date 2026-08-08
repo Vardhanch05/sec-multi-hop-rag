@@ -25,7 +25,7 @@ The core differentiator is an **NLI-based contradiction detection layer** using 
 | NLI / Contradiction | `cross-encoder/nli-deberta-v3-base` | same |
 | Vector DB | ChromaDB | Qdrant Cloud |
 | Relational DB | SQLite | PostgreSQL on Render |
-| PDF parsing | pdfplumber | same |
+| Filing parsing | edgartools | same |
 | Frontend | Streamlit | Streamlit Community Cloud |
 | CI/CD | GitHub Actions | same |
 | Evaluation | RAGAS | same |
@@ -40,7 +40,7 @@ Two workflow tracks:
 
 ### Ingestion (daily, automated — GitHub Actions cron 06:00 UTC)
 ```
-SEC EDGAR RSS → edgar_client.py → pdf_extractor.py (pdfplumber)
+SEC EDGAR API → edgar_client.py → filing_extractor.py (edgartools)
   → section_chunker.py (regex) → embedder.py (MiniLM) → vector_store.py (ChromaDB/Qdrant)
   → db/queries.py (filings table + ingestion_logs)
 ```
@@ -62,12 +62,15 @@ User Query → query_classifier.py (Groq → HopPlan JSON)
 ## 4. Key Design Decisions (important for implementation)
 
 ### 4.1 Section-aware chunking
-SEC filings have well-defined section headers. Chunks are bounded by section type (MD&A, Risk Factors, Forward Guidance, Financial Statements) using regex, not sliding windows. This enables metadata filtering by section and prevents financial statement data mixing with forward-looking statements.
+SEC filings have well-defined section headers. Chunks are bounded by section type (MD&A, Risk Factors, Financial Statements) using regex, not sliding windows. This enables metadata filtering by section and prevents financial statement data mixing with other statements.
+
+> [!NOTE]
+> **Why Forward Guidance was removed:** 
+> Previously, "Forward Guidance" was included as a required section type. However, Forward Guidance is not a standardized SEC Item (unlike Item 7 MD&A or Item 1A Risk Factors). It is typically a sub-section within MD&A. Attempts to extract it via regex invariably matched boilerplate "Safe Harbor" statements ("Cautionary Statement Regarding Forward-Looking Statements") scattered throughout the document. This caused the chunker to prematurely sever and corrupt the MD&A and Financial Statements sections. Since no benchmark questions depend on a standalone Forward Guidance chunk, the requirement was formally downscoped to ensure core financial sections remain intact.
 
 Regex patterns:
 - MD&A: `(?i)(item\s+2\.?\s*management.{0,30}discussion)`
 - Risk Factors: `(?i)(item\s+1a\.?\s*risk\s+factors)`
-- Forward Guidance: `(?i)(forward[- ]looking\s+statements?\|outlook\|guidance)`
 - Financial Statements: `(?i)(item\s+[18]\.?\s*(financial\s+statements\|quantitative))`
 
 ### 4.2 NLI over vector similarity for contradiction detection
@@ -326,7 +329,7 @@ See `tasks.md` for the full list. Summary:
 | chromadb | 1.5.9 | Pinned 0.5.3 had numpy build issue |
 | streamlit | 1.57.0 | Latest |
 | ragas | 0.4.3 | Latest |
-| pdfplumber | 0.11.0 | Exact pin |
+| edgartools | 5.31.5 | Exact pin |
 | groq | 0.9.0 | Exact pin |
 | qdrant-client | 1.9.1 | Exact pin |
 | hypothesis | 6.108.5 | Exact pin |

@@ -11,6 +11,9 @@ from retrieval.hop_planner import (
 from retrieval.query_classifier import HopPlan, PeriodSpec
 
 # Feature: sec-rag-system, Property 8: Temporal reference resolution
+# NOTE: The available_periods mocked in these tests assume data is already natively
+# stored in Fiscal format. `ingestion/edgar_client.py` is the source of truth 
+# for all calendar-to-fiscal mapping during ingestion.
 @given(
     ticker=st.text(min_size=1, max_size=5).map(lambda s: s.upper()),
     ref=st.sampled_from(["last quarter", "last 4 quarters", "last year", "Q3 2023", "2023"]),
@@ -64,7 +67,6 @@ def test_hop_resolution_error_message():
     assert "Q1 2023" in err_msg
     assert "Q2 2023" in err_msg
     assert "Q3 2023" in err_msg
-    assert "Q4 2023" in err_msg
     assert err_msg == "No filings found for AAPL Q3 2022. Available periods: Q1 2023, Q2 2023, Q3 2023, Q4 2023."
 
 def test_resolve_temporal_reference_rules():
@@ -109,9 +111,9 @@ def test_resolve_temporal_reference_rules():
 
 def test_plan_hops_basic():
     available = [
-        FilingPeriod("AAPL", "Q1", 2023, "10-Q", date(2023, 2, 1)),
-        FilingPeriod("AAPL", "Q2", 2023, "10-Q", date(2023, 5, 1)),
-        FilingPeriod("MSFT", "Q1", 2023, "10-Q", date(2023, 2, 1)),
+        FilingPeriod("AAPL", "Q1", 2023, "10-Q", date(2023, 2, 1)), # Native Fiscal Q1 2023
+        FilingPeriod("AAPL", "Q2", 2023, "10-Q", date(2023, 5, 1)), # Native Fiscal Q2 2023
+        FilingPeriod("MSFT", "Q1", 2023, "10-Q", date(2023, 2, 1)), # Native Fiscal Q1 2023
     ]
     
     plan = HopPlan(
