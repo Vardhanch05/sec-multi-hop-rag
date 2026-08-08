@@ -5,9 +5,12 @@ Executes parallel vector similarity searches using concurrent thread workers.
 """
 
 import concurrent.futures
+import logging
 from dataclasses import dataclass
 from datetime import date
 from typing import List, Dict, Any, Optional
+
+logger = logging.getLogger(__name__)
 
 from retrieval.hop_planner import HopSpec
 from ingestion.embedder import embed_query
@@ -54,7 +57,7 @@ def doc_to_chunk_result(doc: Dict[str, Any]) -> ChunkResult:
 def retrieve_hops(
     query: str,
     hop_specs: List[HopSpec],
-    top_k_per_hop: int = 5
+    top_k_per_hop: int = 3
 ) -> Dict[HopSpec, List[ChunkResult]]:
     """
     Embeds the user query once, then executes parallel metadata-filtered vector
@@ -90,6 +93,29 @@ def retrieve_hops(
             filters=filters,
             top_k=top_k_per_hop
         )
+        
+        # Fallback - drop section filter if insufficient results (e.g., misclassified sections)
+        if len(raw_results) < top_k_per_hop and hop_spec.section_type:
+            original_len = len(raw_results)
+            fallback_filters = {
+                "ticker": hop_spec.ticker,
+                "fiscal_year": hop_spec.fiscal_year,
+                "filing_type": hop_spec.filing_type,
+                "quarter": q_val
+            }
+            fallback_results = store.search(
+                query_embedding=query_embedding,
+                filters=fallback_filters,
+                top_k=top_k_per_hop
+            )
+            
+            raw_results = fallback_results
+            logger.warning(
+                f"Section filter '{hop_spec.section_type}' returned only {original_len} results "
+                f"for {hop_spec.ticker} {hop_spec.quarter} {hop_spec.fiscal_year}. "
+                f"Retried without section filter, got {len(raw_results)} results."
+            )
+            
         return [doc_to_chunk_result(r) for r in raw_results]
 
     with concurrent.futures.ThreadPoolExecutor() as executor:

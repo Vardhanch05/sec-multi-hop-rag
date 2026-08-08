@@ -30,11 +30,25 @@ def _process_claims(claims: List[Claim]) -> List[ContradictionEvent]:
     if not claims:
         return []
 
-    # 1. Filter cross-period pairs only
+    from ingestion.embedder import embed_query
+    import numpy as np
+
     pairs = []
     for i in range(len(claims)):
-        for j in range(len(claims)):
-            if i != j and is_cross_period(claims[i], claims[j]):
+        for j in range(i + 1, len(claims)):
+            if is_cross_period(claims[i], claims[j]):
+                # Compute fast bi-encoder semantic similarity
+                try:
+                    emb1 = np.array(embed_query(claims[i].claim_text))
+                    emb2 = np.array(embed_query(claims[j].claim_text))
+                    norm1 = np.linalg.norm(emb1)
+                    norm2 = np.linalg.norm(emb2)
+                    if norm1 > 0 and norm2 > 0:
+                        sim = float(np.dot(emb1, emb2) / (norm1 * norm2))
+                        if sim < 0.55: # Cosine similarity threshold for relevance
+                            continue
+                except Exception as e:
+                    logger.warning(f"Error computing claim similarity: {e}")
                 pairs.append((claims[i], claims[j]))
 
     if not pairs:
@@ -79,15 +93,20 @@ def _process_claims(claims: List[Claim]) -> List[ContradictionEvent]:
 
     return contradictions
 
+_nli_executor = ThreadPoolExecutor(max_workers=1)
+
 def score_contradictions(claims: List[Claim], timeout_seconds: float = NLI_TIMEOUT_SECONDS) -> ContradictionReport:
     """
     Scorer pipeline that runs in a ThreadPoolExecutor to enforce a strict timeout.
     """
-    with ThreadPoolExecutor(max_workers=1) as executor:
-        future = executor.submit(_process_claims, claims)
-        try:
-            contradictions = future.result(timeout=timeout_seconds)
-            return ContradictionReport(contradictions=contradictions, timed_out=False)
-        except TimeoutError:
-            logger.warning(f"NLI scoring timed out after {timeout_seconds} seconds")
-            return ContradictionReport(contradictions=[], timed_out=True)
+    # Pre-load the model outside the executor to ensure model loading 
+    # doesn't consume the strict 30-second inference timeout budget.
+    get_model()
+    
+    future = _nli_executor.submit(_process_claims, claims)
+    try:
+        contradictions = future.result(timeout=timeout_seconds)
+        return ContradictionReport(contradictions=contradictions, timed_out=False)
+    except TimeoutError:
+        logger.warning(f"NLI scoring timed out after {timeout_seconds} seconds")
+        return ContradictionReport(contradictions=[], timed_out=True)

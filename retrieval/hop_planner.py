@@ -5,7 +5,10 @@ Resolves temporal references into explicit retrieval hops.
 """
 
 import re
+import logging
 from dataclasses import dataclass
+
+logger = logging.getLogger(__name__)
 from datetime import date
 from typing import List, Optional
 from retrieval.query_classifier import HopPlan, PeriodSpec
@@ -41,24 +44,34 @@ def format_available_periods(ticker: str, periods: list[FilingPeriod]) -> str:
     if not periods:
         return "None"
     
+    # Periods are already stored natively as fiscal
+    fiscal_periods = []
+    for p in periods:
+        fiscal_periods.append((p.quarter, p.fiscal_year, p.filing_date))
+    
     # Sort ascending for clean chronological list
-    def sort_key(p: FilingPeriod):
-        d = p.filing_date or date.min
+    def sort_key(p):
+        fq, fy, d = p
         q_val = 0
-        if p.quarter:
+        if fq:
             try:
-                q_val = int(p.quarter[1])
+                q_val = int(fq[1])
             except (ValueError, IndexError):
                 q_val = 0
-        return (p.fiscal_year, q_val, d)
+        return (fy, q_val, d or date.min)
         
-    sorted_asc = sorted(periods, key=sort_key)
+    sorted_asc = sorted(fiscal_periods, key=sort_key)
+    
+    # Deduplicate to avoid repeating 10-K and 10-Q for the same mapped quarter if they collide
+    seen = set()
     formatted = []
-    for p in sorted_asc:
-        if p.quarter:
-            formatted.append(f"{p.quarter} {p.fiscal_year}")
-        else:
-            formatted.append(f"10-K {p.fiscal_year}")
+    for fq, fy, _ in sorted_asc:
+        # For display, if it's the 10-K, fq is None
+        label = f"{fq} {fy}" if fq else f"10-K {fy}"
+        if label not in seen:
+            seen.add(label)
+            formatted.append(label)
+            
     return ", ".join(formatted)
 
 def _sort_periods_descending(periods: list[FilingPeriod]) -> list[FilingPeriod]:
@@ -159,6 +172,8 @@ def resolve_temporal_reference(
         f"Available periods: {format_available_periods(ticker, available_periods)}."
     )
 
+
+
 def plan_hops(hop_plan: HopPlan, available_periods: list[FilingPeriod]) -> list[HopSpec]:
     """
     Resolves temporal references to concrete hop specs.
@@ -171,12 +186,23 @@ def plan_hops(hop_plan: HopPlan, available_periods: list[FilingPeriod]) -> list[
     for p in available_periods:
         ticker_periods.setdefault(p.ticker.upper(), []).append(p)
         
-    for period_spec in hop_plan.periods:
+    # If the LLM extracted tickers but no periods, default to the most recent annual filing
+    periods_to_plan = hop_plan.periods
+    if not periods_to_plan and hop_plan.tickers:
+        periods_to_plan = [PeriodSpec(ticker=t, quarter=None, fiscal_year=None) for t in hop_plan.tickers]
+        
+    for period_spec in periods_to_plan:
         ticker = period_spec.ticker.upper()
         ticker_avail = ticker_periods.get(ticker, [])
         
         q_str = period_spec.quarter
         fy = period_spec.fiscal_year
+        
+        if fy is None:
+            if not q_str or "10-k" in str(q_str).lower() or "annual" in str(q_str).lower():
+                q_str = "last year"
+            else:
+                q_str = "last quarter"
         
         if not ticker_avail:
             missing_p_str = f"{q_str} {fy}" if q_str else f"10-K {fy}"
@@ -195,10 +221,34 @@ def plan_hops(hop_plan: HopPlan, available_periods: list[FilingPeriod]) -> list[
         else:
             # It's a literal reference or QX YYYY or YYYY string
             if q_str and re.match(r'^(Q[1-4])\s+(\d{4})$', q_str.strip().upper()):
-                resolved = resolve_temporal_reference(ticker, q_str, ticker_avail)
+                match = re.match(r'^(Q[1-4])\s+(\d{4})$', q_str.strip().upper())
+                raw_q = match.group(1)
+                raw_y = int(match.group(2))
+                
+                if raw_q == "Q4":
+                    logger.info(f"Routed Fiscal Q4 temporal reference to the annual 10-K filing for fiscal year {raw_y} by design.")
+                    try:
+                        resolved = resolve_temporal_reference(ticker, f"{raw_y}", ticker_avail)
+                    except HopResolutionError:
+                        raise HopResolutionError(
+                            f"No filings found for {ticker} {raw_q} {raw_y}. "
+                            f"Available periods: {format_available_periods(ticker, ticker_avail)}."
+                        )
+                else:
+                    mapped_q_str = f"{raw_q} {raw_y}"
+                    try:
+                        resolved = resolve_temporal_reference(ticker, mapped_q_str, ticker_avail)
+                    except HopResolutionError:
+                        raise HopResolutionError(
+                            f"No filings found for {ticker} {raw_q} {raw_y}. "
+                            f"Available periods: {format_available_periods(ticker, ticker_avail)}."
+                        )
             else:
                 # Literal match of quarter and fiscal_year
-                norm_q = q_str.upper() if q_str else None
+                orig_q = q_str.strip().upper() if q_str else None
+                orig_fy = fy
+                norm_q = orig_q
+                    
                 matching = []
                 for p in ticker_avail:
                     if p.fiscal_year == fy:
@@ -208,8 +258,17 @@ def plan_hops(hop_plan: HopPlan, available_periods: list[FilingPeriod]) -> list[
                         elif p.quarter == norm_q:
                             matching.append(p)
                 
+                if orig_q == "Q4" and fy is not None:
+                    matching_10k = [p for p in ticker_avail if p.fiscal_year == fy and (p.quarter is None or p.filing_type == "10-K")]
+                    if matching_10k:
+                        logger.info(f"Routed Fiscal Q4 temporal reference to the annual 10-K filing for fiscal year {fy} by design.")
+                        matching = matching_10k
+                    else:
+                        matching = []
+                
                 if not matching:
-                    missing_p_str = f"{norm_q} {fy}" if norm_q else f"10-K {fy}"
+                    missing_p_str = f"{orig_q} {orig_fy}" if orig_q else f"10-K {orig_fy}"
+                    logger.warning(f"Filing genuinely missing for ticker {ticker} in period {missing_p_str}.")
                     raise HopResolutionError(
                         f"No filings found for {ticker} {missing_p_str}. "
                         f"Available periods: {format_available_periods(ticker, ticker_avail)}."
@@ -218,13 +277,27 @@ def plan_hops(hop_plan: HopPlan, available_periods: list[FilingPeriod]) -> list[
                 
         # For each resolved FilingPeriod, build a HopSpec
         for rp in resolved:
+            sec_hint = hop_plan.section_hint
+            if sec_hint:
+                sec_hint_lower = sec_hint.lower()
+                if "md&a" in sec_hint_lower or ("management" in sec_hint_lower and "discussion" in sec_hint_lower):
+                    sec_hint = "MD&A"
+                elif "risk" in sec_hint_lower:
+                    sec_hint = "Risk Factors"
+                elif "forward" in sec_hint_lower or "guidance" in sec_hint_lower:
+                    sec_hint = "Forward Guidance"
+                elif "financial" in sec_hint_lower:
+                    sec_hint = "Financial Statements"
+                else:
+                    sec_hint = None
+                    
             hop_specs.append(
                 HopSpec(
                     ticker=rp.ticker,
                     quarter=rp.quarter,
                     fiscal_year=rp.fiscal_year,
                     filing_type=rp.filing_type,
-                    section_type=hop_plan.section_hint
+                    section_type=sec_hint
                 )
             )
             

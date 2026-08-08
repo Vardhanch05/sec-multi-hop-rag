@@ -3,10 +3,14 @@ import logging
 from dataclasses import dataclass
 from typing import List, Optional
 from datetime import date
-from groq import Groq
-from config.settings import GROQ_API_KEY, PRIMARY_LLM
+import time
+from groq import Groq, RateLimitError
+from config.settings import GROQ_API_KEY, PRIMARY_LLM, FALLBACK_LLM
 
 logger = logging.getLogger(__name__)
+
+class QueryParseError(Exception):
+    pass
 
 @dataclass
 class PeriodSpec:
@@ -46,6 +50,14 @@ The JSON must have the following schema:
   "requires_contradiction_check": <boolean>
 }
 If the user specifies UI filters, use them to restrict your ticker and date selections.
+If the user query does not explicitly name a company or ticker symbol, and no UI filters are provided, you MUST output an empty list [] for tickers. Do not hallucinate or guess a ticker (e.g., do not output placeholders like PROJECTED_TICKER).
+
+When determining section_hint, use these rules:
+- Revenue figures, financial results, segment performance -> "Financial Statements"
+- Management commentary on results, business trends -> "MD&A"  
+- Risk disclosures -> "Risk Factors"
+- "Item 1. Business" is a 10-K only section about company description — 
+  NEVER use it for financial figures or quarterly data
 """
 
 def classify_query(query: str, ui_filters: UIFilters) -> HopPlan:
@@ -56,26 +68,88 @@ def classify_query(query: str, ui_filters: UIFilters) -> HopPlan:
     api_key = GROQ_API_KEY or "dummy-key"
     client = Groq(api_key=api_key)
     
-    user_prompt = f"User Query: {query}\n"
+    current_date = date.today().isoformat()
+    user_prompt = f"Current Date: {current_date}\nUser Query: {query}\n"
+    user_prompt += "Important: Resolve relative references like 'last year' to concrete fiscal_year integers before outputting JSON.\n"
+    user_prompt += "If the query does not specify a temporal reference, output null for fiscal_year.\n"
+    user_prompt += "If the query contains a garbled or completely unrecognizable temporal reference, you MUST output -1 for fiscal_year.\n"
     if ui_filters:
         user_prompt += f"UI Filters Context: Tickers={ui_filters.tickers}, Start={ui_filters.start_date}, End={ui_filters.end_date}, FilingType={ui_filters.filing_type}\n"
         
-    try:
-        completion = client.chat.completions.create(
-            messages=[
-                {"role": "system", "content": SYSTEM_PROMPT},
-                {"role": "user", "content": user_prompt}
-            ],
-            model=PRIMARY_LLM,
-            temperature=0.0,
-            response_format={"type": "json_object"}
-        )
+    # Try with PRIMARY_LLM, retry on RateLimitError, and fallback to FALLBACK_LLM
+    backoffs = [0, 1, 2]
+    max_attempts = 4
+    force_fallback = False
+    completion = None
+    response_text = None
+    last_error = None
+    
+    for attempt in range(1, max_attempts + 1):
+        current_model = FALLBACK_LLM if force_fallback else (PRIMARY_LLM if attempt <= 3 else FALLBACK_LLM)
+        try:
+            completion = client.chat.completions.create(
+                messages=[
+                    {"role": "system", "content": SYSTEM_PROMPT},
+                    {"role": "user", "content": user_prompt}
+                ],
+                model=current_model,
+                temperature=0.0,
+                response_format={"type": "json_object"}
+            )
+            response_text = completion.choices[0].message.content
+            break
+        except RateLimitError as e:
+            last_error = e
+            if attempt <= 3 and not force_fallback:
+                sleep_time = backoffs[attempt - 1]
+                logger.warning(f"RateLimitError in query classification (attempt {attempt}). Retrying in {sleep_time}s...")
+                time.sleep(sleep_time)
+            else:
+                logger.warning(f"RateLimitError in query classification (attempt {attempt}). Switching to fallback.")
+                force_fallback = True
+        except Exception as e:
+            last_error = e
+            logger.error(f"Error during query classification attempt {attempt} with model {current_model}: {e}")
+            if attempt == max_attempts:
+                raise RuntimeError(f"Query classification failed: {e}")
+                
+    if response_text is None:
+        raise RuntimeError(f"Query classification failed: {last_error or 'No response generated due to rate limits'}")
         
-        response_text = completion.choices[0].message.content
+    try:
         data = json.loads(response_text)
         
-        periods = [PeriodSpec(**p) for p in data.get("periods", [])]
         tickers = data.get("tickers", [])
+        
+        from db.queries import get_all_tickers
+        valid_tickers = get_all_tickers()
+        
+        # Filter out any hallucinated tickers that are not in the database
+        invalid_tickers = [t for t in tickers if t.upper() not in valid_tickers]
+        tickers = [t for t in tickers if t.upper() in valid_tickers]
+        
+        # Merge UI filters
+        if ui_filters and ui_filters.tickers:
+            for t in ui_filters.tickers:
+                if t not in tickers:
+                    tickers.append(t)
+                    
+        if not tickers:
+            error_msg = "Please specify a valid company in your query or select a ticker in the UI filters."
+            if invalid_tickers:
+                error_msg = f"The requested company/ticker ({', '.join(invalid_tickers)}) is not available in the database. " + error_msg
+            raise QueryParseError(error_msg)
+            
+        periods = []
+        for p in data.get("periods", []):
+            spec = PeriodSpec(**p)
+            if spec.fiscal_year == -1:
+                raise QueryParseError("Could not resolve relative temporal reference to a concrete year")
+                
+            if not spec.ticker:
+                spec.ticker = tickers[0]
+                
+            periods.append(spec)
         
         hop_count = len(periods)
         
@@ -95,14 +169,8 @@ def classify_query(query: str, ui_filters: UIFilters) -> HopPlan:
             requires_contradiction_check=data.get("requires_contradiction_check", False)
         )
         
+    except QueryParseError as e:
+        raise
     except Exception as e:
         logger.error(f"Failed to classify query: {e}")
-        # Return a safe fallback
-        return HopPlan(
-            hop_count=1,
-            query_type="single_hop",
-            tickers=ui_filters.tickers if ui_filters and ui_filters.tickers else [],
-            periods=[],
-            section_hint=None,
-            requires_contradiction_check=False
-        )
+        raise RuntimeError(f"Query classification failed: {e}")

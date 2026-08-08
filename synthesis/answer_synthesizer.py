@@ -43,6 +43,16 @@ Be concise, factual, and direct.
 def synthesize(query: str, claims: List[Claim], contradiction_report: ContradictionReport) -> ResponsePayload:
     start_time = time.time()
     
+    if not claims:
+        return ResponsePayload(
+            answer="No relevant information was found in the retrieved documents to answer this query.",
+            citations=[],
+            contradictions=[],
+            latency_ms=int((time.time() - start_time) * 1000),
+            model_used="none",
+            contradiction_detection_skipped=False
+        )
+        
     # 1. Build Citation list
     citations_map = {}
     for c in claims:
@@ -81,9 +91,10 @@ def synthesize(query: str, claims: List[Claim], contradiction_report: Contradict
     # Retry logic (19.2)
     backoffs = [0, 1, 2]
     max_attempts = 4
+    force_fallback = False
     
     for attempt in range(1, max_attempts + 1):
-        current_model = PRIMARY_LLM if attempt <= 3 else FALLBACK_LLM
+        current_model = FALLBACK_LLM if force_fallback else (PRIMARY_LLM if attempt <= 3 else FALLBACK_LLM)
         try:
             completion = client.chat.completions.create(
                 messages=[
@@ -97,7 +108,7 @@ def synthesize(query: str, claims: List[Claim], contradiction_report: Contradict
             model_used = current_model
             break
         except RateLimitError as e:
-            if attempt <= 3:
+            if attempt <= 3 and not force_fallback:
                 sleep_time = backoffs[attempt - 1]
                 logger.warning(f"RateLimitError on attempt {attempt}. Retrying in {sleep_time}s...")
                 time.sleep(sleep_time)
@@ -107,6 +118,12 @@ def synthesize(query: str, claims: List[Claim], contradiction_report: Contradict
                 model_used = current_model
                 # No exception raised, gracefully returns
         except Exception as e:
+            err_str = str(e)
+            if ("413" in err_str or "Request too large" in err_str) and not force_fallback:
+                logger.warning(f"Context too large for {current_model} (attempt {attempt}). Switching to fallback.")
+                force_fallback = True
+                continue
+            
             logger.error(f"Error during LLM synthesis: {e}")
             answer_text = f"An error occurred during synthesis: {e}"
             model_used = current_model
@@ -123,3 +140,119 @@ def synthesize(query: str, claims: List[Claim], contradiction_report: Contradict
         model_used=model_used,
         contradiction_detection_skipped=contradiction_report.timed_out
     )
+
+
+def synthesize_stream(query: str, claims: List[Claim], contradiction_report: ContradictionReport):
+    """
+    Yields answer tokens sequentially during generation.
+    Yields a ResponsePayload as the final item for metadata collection.
+    """
+    start_time = time.time()
+    
+    if not claims:
+        msg = "No relevant information was found in the retrieved documents to answer this query."
+        yield msg
+        yield ResponsePayload(
+            answer=msg,
+            citations=[],
+            contradictions=[],
+            latency_ms=int((time.time() - start_time) * 1000),
+            model_used="none",
+            contradiction_detection_skipped=False
+        )
+        return
+        
+    # 1. Build Citation list
+    citations_map = {}
+    for c in claims:
+        filing_type = "10-Q" if c.quarter else "10-K"
+        citation = Citation(
+            filing_type=filing_type,
+            section=c.section_type,
+            ticker=c.ticker,
+            fiscal_year=c.fiscal_year,
+            accession_number=c.accession_number
+        )
+        key = (citation.accession_number, citation.section)
+        if key not in citations_map:
+            citations_map[key] = citation
+    citations = list(citations_map.values())
+    
+    # 2. Build Prompt
+    user_prompt = f"User Query: {query}\n\n"
+    
+    user_prompt += "--- Retrieved Claims ---\n"
+    for i, c in enumerate(claims, 1):
+        user_prompt += f"[{i}] Ticker: {c.ticker}, {c.fiscal_year} {c.quarter or 'Annual'}: {c.claim_text}\n"
+        
+    if contradiction_report.contradictions:
+        user_prompt += "\n--- Detected Contradictions ---\n"
+        for i, ce in enumerate(contradiction_report.contradictions, 1):
+            user_prompt += f"Contradiction {i}: The claim '{ce.claim_a}' conflicts with '{ce.claim_b}'.\n"
+
+    api_key = GROQ_API_KEY or "dummy-key"
+    client = Groq(api_key=api_key)
+    
+    model_used = PRIMARY_LLM
+    force_fallback = False
+    full_text = []
+    
+    backoffs = [0, 1, 2]
+    
+    for attempt in range(1, 5):
+        current_model = FALLBACK_LLM if force_fallback else (PRIMARY_LLM if attempt <= 3 else FALLBACK_LLM)
+        try:
+            completion_stream = client.chat.completions.create(
+                messages=[
+                    {"role": "system", "content": SYSTEM_PROMPT},
+                    {"role": "user", "content": user_prompt}
+                ],
+                model=current_model,
+                temperature=0.2,
+                stream=True
+            )
+            for chunk in completion_stream:
+                if chunk.choices and len(chunk.choices) > 0 and chunk.choices[0].delta.content:
+                    content = chunk.choices[0].delta.content
+                    full_text.append(content)
+                    yield content
+            model_used = current_model
+            break
+        except RateLimitError as e:
+            if attempt <= 3 and not force_fallback:
+                sleep_time = backoffs[attempt - 1]
+                logger.warning(f"RateLimitError on streaming attempt {attempt}. Retrying in {sleep_time}s...")
+                time.sleep(sleep_time)
+            else:
+                logger.warning(f"RateLimitError on streaming attempt {attempt}. Exhausted fallback attempts.")
+                err_msg = "System is currently overloaded (Rate Limit). Please try again later."
+                full_text.append(err_msg)
+                yield err_msg
+                model_used = current_model
+                break
+        except Exception as e:
+            err_str = str(e)
+            if ("413" in err_str or "Request too large" in err_str) and not force_fallback:
+                logger.warning(f"Context too large for stream {current_model} (attempt {attempt}). Switching to fallback.")
+                force_fallback = True
+                continue
+            
+            logger.error(f"Error during LLM streaming synthesis: {e}")
+            err_msg = f"An error occurred during synthesis: {e}"
+            full_text.append(err_msg)
+            yield err_msg
+            model_used = current_model
+            break
+            
+    latency_ms = int((time.time() - start_time) * 1000)
+    answer_text = "".join(full_text)
+    
+    yield ResponsePayload(
+        answer=answer_text,
+        citations=citations,
+        contradictions=contradiction_report.contradictions,
+        latency_ms=latency_ms,
+        model_used=model_used,
+        contradiction_detection_skipped=contradiction_report.timed_out
+    )
+

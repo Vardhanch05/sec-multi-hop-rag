@@ -32,11 +32,13 @@ class Claim:
 SYSTEM_PROMPT = """
 You are an expert financial research AI assistant. Your task is to extract exactly one concise, factual claim or statement from each of the provided numbered financial document chunks (1 to N) that is relevant to the user's query.
 
-You must respond with ONLY a valid JSON object containing a single key "claims", which maps to a list of strings:
+If a chunk does not contain any information relevant to the user's query, you MUST return null (or None) for that chunk's claim in the list.
+
+You must respond with ONLY a valid JSON object containing a single key "claims", which maps to a list:
 {
   "claims": [
     "concise factual statement relevant to the query from chunk 1",
-    "concise factual statement relevant to the query from chunk 2"
+    null
   ]
 }
 Do not include any markdown styling, formatting, or extra text.
@@ -69,49 +71,83 @@ def extract_claims(query: str, chunk_results: List[ChunkResult]) -> List[Claim]:
 
     parsed_claims = []
     api_key = GROQ_API_KEY or "dummy-key"
+    client = Groq(api_key=api_key)
     
-    try:
-        client = Groq(api_key=api_key)
-        completion = client.chat.completions.create(
-            messages=[
-                {"role": "system", "content": SYSTEM_PROMPT},
-                {"role": "user", "content": user_prompt}
-            ],
-            model=PRIMARY_LLM,
-            temperature=0.0,
-            response_format={"type": "json_object"}
-        )
-        
-        response_text = completion.choices[0].message.content
-        data = json.loads(response_text)
-        if isinstance(data, dict) and "claims" in data:
-            parsed_claims = data["claims"]
+    # Try with PRIMARY_LLM, fallback to FALLBACK_LLM on failure (e.g. 413 or 429 errors)
+    from config.settings import FALLBACK_LLM
+    
+    api_success = False
+    for model_to_try in [PRIMARY_LLM, FALLBACK_LLM]:
+        try:
+            completion = client.chat.completions.create(
+                messages=[
+                    {"role": "system", "content": SYSTEM_PROMPT},
+                    {"role": "user", "content": user_prompt}
+                ],
+                model=model_to_try,
+                temperature=0.0,
+                response_format={"type": "json_object"}
+            )
             
-    except Exception as e:
-        logger.error(f"Failed to extract claims via Groq: {e}")
+            response_text = completion.choices[0].message.content
+            data = json.loads(response_text)
+            if isinstance(data, dict) and "claims" in data:
+                parsed_claims = data["claims"]
+                api_success = True
+                break # Success!
+                
+        except Exception as e:
+            logger.warning(f"Failed to extract claims via Groq model {model_to_try}: {e}")
 
-    # Build exactly N Claim objects
     claims = []
+    
+    # Common patterns indicating "no information"
+    no_info_patterns = [
+        r"(?i)^no\s+relevant\s+information",
+        r"(?i)^no\s+information",
+        r"(?i)^not\s+mentioned",
+        r"(?i)^n/a",
+        r"(?i)^not\s+found",
+        r"(?i)^chunk\s+\d+\s+does\s+not",
+        r"(?i)^this\s+chunk\s+does\s+not",
+        r"(?i)^no\s+claim",
+        r"(?i)^null$"
+    ]
+
     for i, chunk in enumerate(chunk_results):
         claim_text = None
-        if i < len(parsed_claims):
-            claim_text = parsed_claims[i]
-            
-        if not claim_text or not isinstance(claim_text, str) or not claim_text.strip():
-            claim_text = _get_first_sentence(chunk.text)
-            
-        claims.append(
-            Claim(
-                claim_text=claim_text.strip(),
-                ticker=chunk.ticker,
-                quarter=chunk.quarter,
-                fiscal_year=chunk.fiscal_year,
-                section_type=chunk.section_type,
-                chunk_index=chunk.chunk_index,
-                filing_date=chunk.filing_date,
-                accession_number=chunk.accession_number,
-                source_url=chunk.source_url
-            )
-        )
         
+        if api_success:
+            if i < len(parsed_claims):
+                val = parsed_claims[i]
+                if isinstance(val, str) and val.strip():
+                    claim_text = val.strip()
+        else:
+            # Fallback to the first sentence if the entire API call failed
+            claim_text = _get_first_sentence(chunk.text)
+            if not claim_text:
+                claim_text = chunk.text[:200]
+                
+        # If we have a claim text, verify it is not a "no information" statement
+        if claim_text:
+            is_no_info = any(re.search(pat, claim_text) for pat in no_info_patterns)
+            if is_no_info:
+                claim_text = None
+                
+        if claim_text:
+            claims.append(
+                Claim(
+                    claim_text=claim_text,
+                    ticker=chunk.ticker,
+                    quarter=chunk.quarter,
+                    fiscal_year=chunk.fiscal_year,
+                    section_type=chunk.section_type,
+                    chunk_index=chunk.chunk_index,
+                    filing_date=chunk.filing_date,
+                    accession_number=chunk.accession_number,
+                    source_url=chunk.source_url
+                )
+            )
+            
     return claims
+
