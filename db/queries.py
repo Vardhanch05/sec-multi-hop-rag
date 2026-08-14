@@ -155,3 +155,73 @@ def get_ragas_results() -> list[dict]:
         }
         for r in rows
     ]
+
+def create_ingestion_task(task_id: str, ticker: str, fiscal_year: int) -> None:
+    """Inserts a new background ingestion task record into ingestion_tasks."""
+    query = """
+        INSERT INTO ingestion_tasks (task_id, ticker, fiscal_year, status, progress, message)
+        VALUES (?, ?, ?, 'processing', 10, 'Task initialized')
+    """
+    with get_connection() as conn:
+        conn.execute(query, (task_id, ticker, fiscal_year))
+        conn.commit()
+
+def update_ingestion_task(task_id: str, status: str, progress: int, message: str) -> None:
+    """Updates the status, progress, and message for a background ingestion task."""
+    query = """
+        UPDATE ingestion_tasks
+        SET status = ?, progress = ?, message = ?, updated_at = CURRENT_TIMESTAMP
+        WHERE task_id = ?
+    """
+    with get_connection() as conn:
+        conn.execute(query, (status, progress, message, task_id))
+        conn.commit()
+
+def get_ingestion_task(task_id: str) -> dict | None:
+    """Retrieves an ingestion task record by task_id."""
+    query = """
+        SELECT task_id, ticker, fiscal_year, status, progress, message, created_at, updated_at
+        FROM ingestion_tasks
+        WHERE task_id = ?
+    """
+    with get_connection() as conn:
+        cursor = conn.execute(query, (task_id,))
+        row = cursor.fetchone()
+        if row:
+            return {
+                "task_id": row["task_id"],
+                "ticker": row["ticker"],
+                "fiscal_year": row["fiscal_year"],
+                "status": row["status"],
+                "progress": row["progress"],
+                "message": row["message"],
+                "created_at": row["created_at"],
+                "updated_at": row["updated_at"],
+            }
+        return None
+
+def get_recent_ingestion_tasks(limit: int = 10) -> list[dict]:
+    """Retrieves recent background ingestion tasks ordered by creation time descending."""
+    query = """
+        SELECT task_id, ticker, fiscal_year, status, progress, message, created_at, updated_at
+        FROM ingestion_tasks
+        ORDER BY created_at DESC
+        LIMIT ?
+    """
+    with get_connection() as conn:
+        cursor = conn.execute(query, (limit,))
+        rows = cursor.fetchall()
+        return [
+            {
+                "task_id": r["task_id"],
+                "ticker": r["ticker"],
+                "fiscal_year": r["fiscal_year"],
+                "status": r["status"],
+                "progress": r["progress"],
+                "message": r["message"],
+                "created_at": r["created_at"],
+                "updated_at": r["updated_at"],
+            }
+            for r in rows
+        ]
+

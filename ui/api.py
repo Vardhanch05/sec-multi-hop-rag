@@ -9,7 +9,9 @@ import os
 import json
 import logging
 from typing import List, Optional
-from fastapi import FastAPI, HTTPException
+from datetime import date
+import time
+from fastapi import FastAPI, HTTPException, BackgroundTasks
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
@@ -21,7 +23,10 @@ sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')
 # Load env
 load_dotenv()
 
-from db.queries import get_corpus_stats, get_all_tickers, get_ragas_results
+from db.queries import (
+    get_corpus_stats, get_all_tickers, get_ragas_results,
+    create_ingestion_task, update_ingestion_task, get_ingestion_task, get_recent_ingestion_tasks
+)
 from retrieval.query_classifier import classify_query, UIFilters
 from retrieval.hop_planner import plan_hops, get_available_periods
 from retrieval.retriever import retrieve_hops
@@ -237,8 +242,72 @@ async def chat_endpoint(request: ChatRequest):
 
     return StreamingResponse(event_generator(), media_type="text/plain")
 
+class IngestRequest(BaseModel):
+    ticker: str
+    fiscal_year: Optional[int] = 2025
+
+def execute_background_ingestion(task_id: str, ticker: str, fiscal_year: int):
+    """Worker function executed asynchronously in background."""
+    try:
+        logger.info(f"Starting background ingestion task {task_id} for {ticker} ({fiscal_year})")
+        update_ingestion_task(task_id, "processing", 25, f"Connecting to SEC EDGAR for {ticker}...")
+        
+        from ingestion.pipeline import run_ingestion
+        since_dt = date(fiscal_year - 1, 1, 1)
+        
+        update_ingestion_task(task_id, "processing", 50, f"Downloading & parsing 10-K/10-Q sections for {ticker}...")
+        run_ingestion([ticker.upper()], since_date=since_dt)
+        
+        update_ingestion_task(task_id, "processing", 85, f"Indexing vector embeddings for {ticker}...")
+        time.sleep(1)
+        
+        update_ingestion_task(task_id, "completed", 100, f"Successfully ingested {ticker} filings for FY{fiscal_year}!")
+        logger.info(f"Completed background ingestion task {task_id}")
+    except Exception as e:
+        logger.error(f"Error in background ingestion task {task_id}: {e}", exc_info=True)
+        update_ingestion_task(task_id, "failed", 0, f"Ingestion failed: {str(e)}")
+
+@app.post("/api/ingest")
+async def trigger_ingestion(request: IngestRequest, background_tasks: BackgroundTasks):
+    ticker = request.ticker.strip().upper()
+    if not ticker:
+        raise HTTPException(status_code=400, detail="Ticker symbol is required")
+        
+    year = request.fiscal_year or 2025
+    task_id = f"task_{ticker}_{year}_{int(time.time())}"
+    
+    try:
+        create_ingestion_task(task_id, ticker, year)
+        background_tasks.add_task(execute_background_ingestion, task_id, ticker, year)
+        return {
+            "task_id": task_id,
+            "ticker": ticker,
+            "fiscal_year": year,
+            "status": "processing",
+            "message": f"Filing ingestion task queued for {ticker}"
+        }
+    except Exception as e:
+        logger.error(f"Error queuing ingestion task: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/api/ingest/status/{task_id}")
+def get_task_status(task_id: str):
+    task = get_ingestion_task(task_id)
+    if not task:
+        raise HTTPException(status_code=404, detail=f"Task {task_id} not found")
+    return task
+
+@app.get("/api/ingest/tasks")
+def list_recent_tasks():
+    try:
+        return get_recent_ingestion_tasks(limit=10)
+    except Exception as e:
+        logger.error(f"Error getting ingestion tasks: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
 if __name__ == "__main__":
     import uvicorn
     port = int(os.getenv("PORT", 8001))
     uvicorn.run("ui.api:app", host="127.0.0.1", port=port, reload=True)
+
 

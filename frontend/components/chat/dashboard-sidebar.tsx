@@ -11,8 +11,10 @@ import {
   CheckSquare, 
   Square,
   BarChart3,
-  Bookmark
+  Bookmark,
+  UploadCloud
 } from "lucide-react"
+import { IngestModal } from "./ingest-modal"
 import { 
   ResponsiveContainer, 
   LineChart, 
@@ -58,6 +60,7 @@ export function DashboardSidebar({
 }: DashboardSidebarProps) {
   const [mounted, setMounted] = useState(false)
   const [activeTab, setActiveTab] = useState<"filters" | "ragas">("filters")
+  const [isIngestOpen, setIsIngestOpen] = useState(false)
 
   useEffect(() => {
     setMounted(true)
@@ -197,6 +200,15 @@ export function DashboardSidebar({
             </span>
           </div>
         </div>
+
+        {/* Async Background Ingestion Button */}
+        <button
+          onClick={() => setIsIngestOpen(true)}
+          className="w-full mt-3 py-2.5 px-3 rounded-xl bg-stone-900 text-white font-semibold text-xs hover:bg-stone-800 transition-all flex items-center justify-center gap-2 shadow-sm shadow-stone-900/10"
+        >
+          <UploadCloud className="w-4 h-4 text-stone-300" />
+          <span>Ingest New Filing</span>
+        </button>
       </div>
 
       {/* Tabs */}
@@ -336,6 +348,12 @@ export function DashboardSidebar({
         </div>
         <span className="text-[9px] text-stone-400 font-mono">ChromaDB + SQLite</span>
       </div>
+
+      {/* Ingest Modal */}
+      <IngestModal 
+        isOpen={isIngestOpen} 
+        onClose={() => setIsIngestOpen(false)} 
+      />
     </div>
   )
 }

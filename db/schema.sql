@@ -53,3 +53,16 @@ CREATE TABLE IF NOT EXISTS benchmark_questions (
     ground_truth_answer TEXT NOT NULL,
     filing_references TEXT NOT NULL            -- JSON array of accession_numbers
 );
+
+-- ingestion_tasks: tracking async background filing ingestion jobs
+CREATE TABLE IF NOT EXISTS ingestion_tasks (
+    task_id           TEXT PRIMARY KEY,
+    ticker            TEXT NOT NULL,
+    fiscal_year       INTEGER NOT NULL,
+    status            TEXT NOT NULL CHECK (status IN ('pending', 'processing', 'completed', 'failed')),
+    progress          INTEGER NOT NULL DEFAULT 0,
+    message           TEXT,
+    created_at        TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at        TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
