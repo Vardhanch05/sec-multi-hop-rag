@@ -33,14 +33,28 @@ def _process_claims(claims: List[Claim]) -> List[ContradictionEvent]:
     from ingestion.embedder import embed_query
     import numpy as np
 
+    # Pre-embed all claims once to avoid O(N^2) redundant embedding lookups
+    claim_embeddings = []
+    for claim in claims:
+        try:
+            emb = np.array(embed_query(claim.claim_text))
+            claim_embeddings.append(emb)
+        except Exception as e:
+            logger.warning(f"Error embedding claim text: {e}")
+            claim_embeddings.append(None)
+
     pairs = []
     for i in range(len(claims)):
+        emb1 = claim_embeddings[i]
+        if emb1 is None:
+            continue
         for j in range(i + 1, len(claims)):
             if is_cross_period(claims[i], claims[j]):
+                emb2 = claim_embeddings[j]
+                if emb2 is None:
+                    continue
                 # Compute fast bi-encoder semantic similarity
                 try:
-                    emb1 = np.array(embed_query(claims[i].claim_text))
-                    emb2 = np.array(embed_query(claims[j].claim_text))
                     norm1 = np.linalg.norm(emb1)
                     norm2 = np.linalg.norm(emb2)
                     if norm1 > 0 and norm2 > 0:

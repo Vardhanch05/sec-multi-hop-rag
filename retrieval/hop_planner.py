@@ -199,7 +199,12 @@ def plan_hops(hop_plan: HopPlan, available_periods: list[FilingPeriod]) -> list[
         fy = period_spec.fiscal_year
         
         if fy is None:
-            if not q_str or "10-k" in str(q_str).lower() or "annual" in str(q_str).lower():
+            # When no section filter is set (litigation/regulatory queries), prefer the most recent
+            # 10-Q because 10-Ks often only contain a stub reference to the full Risk Factors section.
+            # The detailed legal and regulatory disclosures live in the 10-Q Notes to Financial Statements.
+            if hop_plan.section_hint is None and (not q_str or q_str.strip().lower() not in ("last quarter", "last_quarter")):
+                q_str = "last quarter"
+            elif not q_str or "10-k" in str(q_str).lower() or "annual" in str(q_str).lower():
                 q_str = "last year"
             else:
                 q_str = "last quarter"

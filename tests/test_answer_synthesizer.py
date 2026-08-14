@@ -136,7 +136,19 @@ def test_contradiction_payload_propagation(contradictions):
     Validates: Requirements 5.4
     """
     report = ContradictionReport(contradictions=contradictions, timed_out=False)
-    claims = [] # Empty claims list is fine
+    claims = [
+        Claim(
+            claim_text="dummy claim",
+            ticker="AAPL",
+            quarter="Q1",
+            fiscal_year=2024,
+            section_type="MD&A",
+            chunk_index=0,
+            filing_date=date(2024, 1, 1),
+            accession_number="123",
+            source_url="http"
+        )
+    ]
     
     with patch("synthesis.answer_synthesizer.Groq") as mock_groq_class:
         mock_client = MagicMock()

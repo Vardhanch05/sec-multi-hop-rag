@@ -7,6 +7,44 @@ from hypothesis import given, settings, strategies as st
 from retrieval.claim_extractor import extract_claims, Claim, _get_first_sentence
 from retrieval.retriever import ChunkResult
 
+def count_expected_merged_chunks(chunks):
+    if not chunks:
+        return 0
+    sorted_chunks = sorted(
+        chunks,
+        key=lambda c: (
+            c.ticker,
+            c.fiscal_year,
+            c.filing_type,
+            c.quarter or "",
+            c.section_type or "",
+            c.chunk_index
+        )
+    )
+    count = 1
+    current = sorted_chunks[0]
+    last_index = current.chunk_index
+    MAX_MERGE_CHAR_LIMIT = 8000
+    current_len = len(current.text)
+    for next_chunk in sorted_chunks[1:]:
+        if (next_chunk.ticker == current.ticker and
+            next_chunk.fiscal_year == current.fiscal_year and
+            next_chunk.filing_type == current.filing_type and
+            next_chunk.quarter == current.quarter and
+            next_chunk.section_type == current.section_type and
+            next_chunk.accession_number == current.accession_number and
+            next_chunk.chunk_index == last_index + 1 and
+            current_len + len(next_chunk.text) < MAX_MERGE_CHAR_LIMIT):
+            
+            current_len += len(next_chunk.text) + 1
+            last_index = next_chunk.chunk_index
+        else:
+            count += 1
+            current = next_chunk
+            last_index = current.chunk_index
+            current_len = len(current.text)
+    return count
+
 # Feature: sec-rag-system, Property 9: Claim extractor cardinality
 @given(
     chunks=st.lists(
@@ -34,21 +72,59 @@ def test_claim_extractor_cardinality(mock_groq_class, chunks):
     mock_client = MagicMock()
     mock_groq_class.return_value = mock_client
     
+    expected_count = count_expected_merged_chunks(chunks)
     mock_response = MagicMock()
     mock_response.choices = [
         MagicMock(message=MagicMock(content=json.dumps({
-            "claims": [f"Factual Claim {i}" for i in range(len(chunks))]
+            "claims": [f"Factual Claim {i}" for i in range(expected_count)]
         })))
     ]
     mock_client.chat.completions.create.return_value = mock_response
     
     claims = extract_claims("test query", chunks)
     
-    # Assert exact N cardinality
-    assert len(claims) == len(chunks)
+    # Assert exact N cardinality of merged chunks
+    assert len(claims) == expected_count
     
     # Assert exact metadata match
-    for claim, chunk in zip(claims, chunks):
+    # Group chunks using the same logic to match with extracted claims
+    sorted_chunks = sorted(
+        chunks,
+        key=lambda c: (
+            c.ticker,
+            c.fiscal_year,
+            c.filing_type,
+            c.quarter or "",
+            c.section_type or "",
+            c.chunk_index
+        )
+    )
+    merged_metadata_chunks = []
+    if sorted_chunks:
+        current = sorted_chunks[0]
+        last_index = current.chunk_index
+        MAX_MERGE_CHAR_LIMIT = 8000
+        current_len = len(current.text)
+        for next_chunk in sorted_chunks[1:]:
+            if (next_chunk.ticker == current.ticker and
+                next_chunk.fiscal_year == current.fiscal_year and
+                next_chunk.filing_type == current.filing_type and
+                next_chunk.quarter == current.quarter and
+                next_chunk.section_type == current.section_type and
+                next_chunk.accession_number == current.accession_number and
+                next_chunk.chunk_index == last_index + 1 and
+                current_len + len(next_chunk.text) < MAX_MERGE_CHAR_LIMIT):
+                
+                current_len += len(next_chunk.text) + 1
+                last_index = next_chunk.chunk_index
+            else:
+                merged_metadata_chunks.append(current)
+                current = next_chunk
+                last_index = current.chunk_index
+                current_len = len(current.text)
+        merged_metadata_chunks.append(current)
+
+    for claim, chunk in zip(claims, merged_metadata_chunks):
         assert claim.ticker == chunk.ticker
         assert claim.quarter == chunk.quarter
         assert claim.fiscal_year == chunk.fiscal_year
@@ -88,7 +164,7 @@ def test_claim_extractor_fallback(mock_groq_class):
     
     claims = extract_claims("What was AAPL growth?", chunks)
     assert len(claims) == 1
-    assert claims[0].claim_text == "AAPL revenue grew. This was driven by iPhone sales."
+    assert claims[0].claim_text == "AAPL revenue grew."
 
     # 2. Too few elements fallback
     mock_response_too_few = MagicMock()
@@ -118,7 +194,7 @@ def test_claim_extractor_fallback(mock_groq_class):
     claims_2 = extract_claims("What were developments?", two_chunks)
     assert len(claims_2) == 2
     assert claims_2[0].claim_text == "Factual claim 1"
-    assert claims_2[1].claim_text == "MSFT cloud segment excelled! Azure growth is strong."
+    assert claims_2[1].claim_text == "MSFT cloud segment excelled!"
 
 def test_get_first_sentence():
     assert _get_first_sentence("First sentence. Second sentence!") == "First sentence."

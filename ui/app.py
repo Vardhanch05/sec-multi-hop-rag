@@ -109,7 +109,7 @@ def render_assistant_details(
                 st.caption(f"🛡️ {ticker} {fiscal_year} {filing_type} ({section})")
                 
     latency_str = f"{latency_ms}ms" if latency_ms is not None else "0ms (Cached)"
-    st.caption(f"⏱️ Latency: {latency_str} | 🤖 Model: {model_used}")
+    st.caption(f"Latency: {latency_str} | Model: {model_used}")
 
 def main():
     st.title("SEC Multi-Hop RAG Analyst")
@@ -253,8 +253,12 @@ def main():
                                 status_placeholder.error("No claims extracted from documents.")
                             else:
                                 # 5. Contradiction Scoring
-                                status_placeholder.info("🔄 Running local NLI model to check contradictions...")
-                                report = score_contradictions(claims)
+                                if hop_plan.requires_contradiction_check:
+                                    status_placeholder.info("🔄 Running local NLI model to check contradictions...")
+                                    report = score_contradictions(claims)
+                                else:
+                                    from contradiction.contradiction_report import ContradictionReport
+                                    report = ContradictionReport(contradictions=[], timed_out=False)
                                 
                                 # 6. Synthesis (Streamed response)
                                 status_placeholder.info("🔄 Generating synthesis report...")

@@ -33,7 +33,8 @@ def test_nli_cross_period_only(claims):
     Validates: Requirements 4.1
     """
     with patch("contradiction.nli_scorer.get_model") as mock_get_model, \
-         patch("contradiction.nli_scorer.insert_contradiction_event") as mock_db:
+         patch("contradiction.nli_scorer.insert_contradiction_event") as mock_db, \
+         patch("ingestion.embedder.embed_query", return_value=[1.0]):
         
         mock_model = MagicMock()
         mock_get_model.return_value = mock_model
@@ -51,8 +52,8 @@ def test_nli_cross_period_only(claims):
             
             cross_period_pairs = []
             for i in range(len(claims)):
-                for j in range(len(claims)):
-                    if i != j and is_cross_period(claims[i], claims[j]):
+                for j in range(i + 1, len(claims)):
+                    if is_cross_period(claims[i], claims[j]):
                         cross_period_pairs.append((claims[i], claims[j]))
             
             expected_len = min(len(cross_period_pairs), MAX_NLI_PAIRS)
@@ -66,7 +67,8 @@ def test_contradiction_event_completeness(claims):
     Validates: Requirements 4.2
     """
     with patch("contradiction.nli_scorer.get_model") as mock_get_model, \
-         patch("contradiction.nli_scorer.insert_contradiction_event") as mock_db:
+         patch("contradiction.nli_scorer.insert_contradiction_event") as mock_db, \
+         patch("ingestion.embedder.embed_query", return_value=[1.0]):
          
         mock_model = MagicMock()
         mock_get_model.return_value = mock_model

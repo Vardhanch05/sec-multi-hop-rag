@@ -58,3 +58,29 @@ def test_query_classifier_cross_company(mock_groq_class):
     assert len(plan.periods) == 2
     assert plan.hop_count == 2
     assert plan.requires_contradiction_check
+
+@patch('retrieval.query_classifier.Groq')
+def test_query_classifier_litigation(mock_groq_class):
+    mock_client = MagicMock()
+    mock_groq_class.return_value = mock_client
+    
+    mock_response = MagicMock()
+    mock_response.choices = [
+        MagicMock(message=MagicMock(content=json.dumps({
+            "hop_count": 1,
+            "query_type": "single_hop",
+            "tickers": ["PFE"],
+            "periods": [{"ticker": "PFE", "quarter": None, "fiscal_year": 2023}],
+            "section_hint": None,
+            "requires_contradiction_check": False
+        })))
+    ]
+    mock_client.chat.completions.create.return_value = mock_response
+    
+    plan = classify_query("Summarize the pending litigation disclosed by Pfizer in their 2023 10-K", UIFilters())
+    
+    assert plan.hop_count == 1
+    assert plan.query_type == "single_hop"
+    assert plan.tickers == ["PFE"]
+    assert plan.section_hint is None
+    assert not plan.requires_contradiction_check

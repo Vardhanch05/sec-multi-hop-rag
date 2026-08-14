@@ -35,7 +35,12 @@ class ResponsePayload:
 
 SYSTEM_PROMPT = """
 You are an expert financial analyst. Synthesize an answer to the user's query based ONLY on the provided financial claims.
-If there are contradictions provided, mention them explicitly in your answer.
+
+A list of potential contradictions detected by an automated system may be provided:
+- Critically evaluate each potential contradiction.
+- Distinguish between true factual conflicts (e.g., conflicting numbers for the exact same metric, period, and filing) versus compatible differences (e.g., three months vs. six months ended, Q2 2023 vs. Q2 2022, or different vehicle models).
+- If they are compatible, resolve them logically in your explanation (e.g., by explaining that one refers to the quarter and the other to the first half of the year). ONLY report a contradiction in your answer if it is a true, irreconcilable conflict.
+
 Do not include any citations or markdown links in your text; the system will attach structured citations separately.
 Be concise, factual, and direct.
 """
@@ -87,14 +92,10 @@ def synthesize(query: str, claims: List[Claim], contradiction_report: Contradict
     
     answer_text = "Failed to generate answer."
     model_used = PRIMARY_LLM
-    
-    # Retry logic (19.2)
-    backoffs = [0, 1, 2]
-    max_attempts = 4
     force_fallback = False
     
-    for attempt in range(1, max_attempts + 1):
-        current_model = FALLBACK_LLM if force_fallback else (PRIMARY_LLM if attempt <= 3 else FALLBACK_LLM)
+    for attempt in range(1, 4):
+        current_model = FALLBACK_LLM if force_fallback else PRIMARY_LLM
         try:
             completion = client.chat.completions.create(
                 messages=[
@@ -102,21 +103,22 @@ def synthesize(query: str, claims: List[Claim], contradiction_report: Contradict
                     {"role": "user", "content": user_prompt}
                 ],
                 model=current_model,
-                temperature=0.2
+                temperature=0.2,
+                max_tokens=512
             )
             answer_text = completion.choices[0].message.content
             model_used = current_model
             break
         except RateLimitError as e:
-            if attempt <= 3 and not force_fallback:
-                sleep_time = backoffs[attempt - 1]
-                logger.warning(f"RateLimitError on attempt {attempt}. Retrying in {sleep_time}s...")
-                time.sleep(sleep_time)
+            if not force_fallback:
+                logger.warning(f"RateLimitError on attempt {attempt}. Switching to fallback immediately.")
+                force_fallback = True
+                model_used = FALLBACK_LLM
+                continue
             else:
-                logger.warning(f"RateLimitError on attempt {attempt}. Exhausted fallback attempts.")
-                answer_text = "System is currently overloaded (Rate Limit). Please try again later."
+                logger.warning(f"RateLimitError on attempt {attempt}. Both models rate-limited.")
+                answer_text = "System is currently overloaded (Rate Limit). Please try again shortly."
                 model_used = current_model
-                # No exception raised, gracefully returns
         except Exception as e:
             err_str = str(e)
             if ("413" in err_str or "Request too large" in err_str) and not force_fallback:
@@ -197,10 +199,8 @@ def synthesize_stream(query: str, claims: List[Claim], contradiction_report: Con
     force_fallback = False
     full_text = []
     
-    backoffs = [0, 1, 2]
-    
-    for attempt in range(1, 5):
-        current_model = FALLBACK_LLM if force_fallback else (PRIMARY_LLM if attempt <= 3 else FALLBACK_LLM)
+    for attempt in range(1, 4):
+        current_model = FALLBACK_LLM if force_fallback else PRIMARY_LLM
         try:
             completion_stream = client.chat.completions.create(
                 messages=[
@@ -209,7 +209,8 @@ def synthesize_stream(query: str, claims: List[Claim], contradiction_report: Con
                 ],
                 model=current_model,
                 temperature=0.2,
-                stream=True
+                stream=True,
+                max_tokens=512
             )
             for chunk in completion_stream:
                 if chunk.choices and len(chunk.choices) > 0 and chunk.choices[0].delta.content:
@@ -219,13 +220,14 @@ def synthesize_stream(query: str, claims: List[Claim], contradiction_report: Con
             model_used = current_model
             break
         except RateLimitError as e:
-            if attempt <= 3 and not force_fallback:
-                sleep_time = backoffs[attempt - 1]
-                logger.warning(f"RateLimitError on streaming attempt {attempt}. Retrying in {sleep_time}s...")
-                time.sleep(sleep_time)
+            if not force_fallback:
+                logger.warning(f"RateLimitError on streaming attempt {attempt}. Switching to fallback immediately.")
+                force_fallback = True
+                model_used = FALLBACK_LLM
+                continue
             else:
-                logger.warning(f"RateLimitError on streaming attempt {attempt}. Exhausted fallback attempts.")
-                err_msg = "System is currently overloaded (Rate Limit). Please try again later."
+                logger.warning(f"RateLimitError on streaming attempt {attempt}. Both models rate-limited.")
+                err_msg = "System is currently overloaded (Rate Limit). Please try again shortly."
                 full_text.append(err_msg)
                 yield err_msg
                 model_used = current_model

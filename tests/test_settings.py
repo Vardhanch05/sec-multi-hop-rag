@@ -7,6 +7,13 @@ These tests run without any .env file — they verify the hardcoded defaults.
 
 import os
 import pytest
+from unittest.mock import patch
+
+
+@pytest.fixture(autouse=True)
+def mock_load_dotenv():
+    with patch("dotenv.load_dotenv"):
+        yield
 
 
 def test_primary_llm_model_name():

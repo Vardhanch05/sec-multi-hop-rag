@@ -55,8 +55,9 @@ If the user query does not explicitly name a company or ticker symbol, and no UI
 When determining section_hint, use these rules:
 - Revenue figures, financial results, segment performance -> "Financial Statements"
 - Management commentary on results, business trends -> "MD&A"  
-- Risk disclosures -> "Risk Factors"
-- "Item 1. Business" is a 10-K only section about company description — 
+- General risk disclosures (market risk, credit risk, operational risk) -> "Risk Factors"
+- Legal proceedings, pending litigation, lawsuits, legal claims, investigations, SEC inquiries, regulatory enforcement, government actions, penalties, fines, consent orders -> null (do not filter by section, search across all sections)
+- "Item 1. Business" is a 10-K only section about company description —
   NEVER use it for financial figures or quarterly data
 """
 
@@ -77,15 +78,15 @@ def classify_query(query: str, ui_filters: UIFilters) -> HopPlan:
         user_prompt += f"UI Filters Context: Tickers={ui_filters.tickers}, Start={ui_filters.start_date}, End={ui_filters.end_date}, FilingType={ui_filters.filing_type}\n"
         
     # Try with PRIMARY_LLM, retry on RateLimitError, and fallback to FALLBACK_LLM
-    backoffs = [0, 1, 2]
-    max_attempts = 4
+    backoffs = [0, 0]
+    max_attempts = 3
     force_fallback = False
     completion = None
     response_text = None
     last_error = None
     
     for attempt in range(1, max_attempts + 1):
-        current_model = FALLBACK_LLM if force_fallback else (PRIMARY_LLM if attempt <= 3 else FALLBACK_LLM)
+        current_model = FALLBACK_LLM if force_fallback else (PRIMARY_LLM if attempt == 1 else FALLBACK_LLM)
         try:
             completion = client.chat.completions.create(
                 messages=[
@@ -94,23 +95,29 @@ def classify_query(query: str, ui_filters: UIFilters) -> HopPlan:
                 ],
                 model=current_model,
                 temperature=0.0,
-                response_format={"type": "json_object"}
+                response_format={"type": "json_object"},
+                max_tokens=256
             )
             response_text = completion.choices[0].message.content
             break
         except RateLimitError as e:
             last_error = e
-            if attempt <= 3 and not force_fallback:
-                sleep_time = backoffs[attempt - 1]
-                logger.warning(f"RateLimitError in query classification (attempt {attempt}). Retrying in {sleep_time}s...")
-                time.sleep(sleep_time)
-            else:
-                logger.warning(f"RateLimitError in query classification (attempt {attempt}). Switching to fallback.")
+            if not force_fallback:
+                logger.warning(f"RateLimitError in query classification (attempt {attempt}). Switching to fallback immediately.")
                 force_fallback = True
+            else:
+                logger.warning(f"RateLimitError in query classification (attempt {attempt}). Fallback also rate-limited.")
         except Exception as e:
             last_error = e
             logger.error(f"Error during query classification attempt {attempt} with model {current_model}: {e}")
-            if attempt == max_attempts:
+            if attempt < max_attempts:
+                sleep_time = 1.0 * attempt
+                logger.warning(f"Transient error in query classification. Retrying in {sleep_time}s...")
+                time.sleep(sleep_time)
+                # If we hit an exception with the primary model, also fallback to the smaller model for subsequent attempts
+                if not force_fallback:
+                    force_fallback = True
+            else:
                 raise RuntimeError(f"Query classification failed: {e}")
                 
     if response_text is None:
@@ -160,13 +167,20 @@ def classify_query(query: str, ui_filters: UIFilters) -> HopPlan:
             if len(periods) < len(tickers) and unique_timeframes > 0:
                 hop_count = len(tickers) * unique_timeframes
         
+        # Override: single-ticker queries never need cross-claim NLI contradiction checking.
+        # NLI only produces value when comparing two *different companies* making conflicting claims
+        # about the same metric. Single-ticker temporal comparisons are handled by the synthesizer directly.
+        requires_contradiction_check = data.get("requires_contradiction_check", False)
+        if len(tickers) <= 1:
+            requires_contradiction_check = False
+        
         return HopPlan(
             hop_count=hop_count,
             query_type=data.get("query_type", "single_hop"),
             tickers=tickers,
             periods=periods,
             section_hint=data.get("section_hint"),
-            requires_contradiction_check=data.get("requires_contradiction_check", False)
+            requires_contradiction_check=requires_contradiction_check
         )
         
     except QueryParseError as e:

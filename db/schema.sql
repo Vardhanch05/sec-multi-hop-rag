@@ -28,7 +28,8 @@ CREATE TABLE IF NOT EXISTS ragas_results (
     answer_relevance      REAL NOT NULL,
     context_precision     REAL NOT NULL,
     context_recall        REAL NOT NULL,
-    subset_breakdowns     TEXT NOT NULL        -- JSON: {single_hop, multi_hop, contradiction}
+    subset_breakdowns     TEXT NOT NULL,       -- JSON: {single_hop, multi_hop, contradiction}
+    is_mock               INTEGER NOT NULL DEFAULT 0
 );
 
 -- contradiction_events: one row per detected contradiction

@@ -37,7 +37,7 @@ FALLBACK_LLM: str = os.getenv("FALLBACK_LLM", "llama-3.1-8b-instant")
 # ---------------------------------------------------------------------------
 CONTRADICTION_THRESHOLD: float = float(os.getenv("CONTRADICTION_THRESHOLD", "0.75"))
 NLI_TIMEOUT_SECONDS: float = float(os.getenv("NLI_TIMEOUT_SECONDS", "60.0"))
-MAX_NLI_PAIRS: int = int(os.getenv("MAX_NLI_PAIRS", "15"))
+MAX_NLI_PAIRS: int = int(os.getenv("MAX_NLI_PAIRS", "50"))
 
 # ---------------------------------------------------------------------------
 # Vector store — ChromaDB (dev) or Qdrant Cloud (prod)
