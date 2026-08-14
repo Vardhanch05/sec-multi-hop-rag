@@ -18,7 +18,7 @@ Unlike conventional single-shot RAG applications that retrieve simple semantic m
 - **Containerization & Cloud Readiness:** Fully containerized with Docker & Docker Compose (`sec-rag-backend` and `sec-rag-frontend`), ensuring 100% reproducible environments.
 - **Automated SEC EDGAR Ingestion:** Automated fetching, parsing, and section chunking (isolating MD&A, Risk Factors, Financial Tables) via `edgartools`.
 - **Hybrid Storage & Caching:** Dual SQLite/PostgreSQL relational data store alongside ChromaDB/Qdrant vector store, with an in-memory semantic query cache to eliminate redundant LLM inference.
-- **High-Rigor Evaluation & Testing:** 50+ Pytest unit/integration tests with property-based testing (`hypothesis`) and automated 5-dimensional benchmark evaluations via RAGAS.
+- **Full-Stack Test Rigor:** 50+ Pytest unit/integration tests with property-based testing (`hypothesis`) on Python backend, alongside Jest & React Testing Library (RTL) component unit tests for Next.js frontend and automated 5-dimensional benchmark evaluations via RAGAS.
 
 ---
 
@@ -66,12 +66,16 @@ Unlike conventional single-shot RAG applications that retrieve simple semantic m
 | **Backend API** | FastAPI + Uvicorn (Python 3.11) | Asynchronous, type-safe Python backend with Pydantic contracts & `BackgroundTasks`. |
 | **Frontend UI** | Next.js 16 + React 19 + Tailwind CSS | Slate-stone financial dashboard with real-time SSE streaming & Framer Motion. |
 | **Containerization**| Docker & Docker Compose | Containerized multi-service deployment (`sec-rag-backend`, `sec-rag-frontend`). |
-| **Testing** | Pytest + Hypothesis | Unit, integration, and property-based edge-case test suite. |
+| **Backend Testing** | Pytest + Hypothesis | Unit, integration, and property-based edge-case test suite for FastAPI backend. |
+| **Frontend Testing**| Jest + React Testing Library (RTL) | Component unit tests for Next.js dashboard, IngestModal, and sidebar. |
 | **Evaluation** | RAGAS Framework | Automated Faithfulness, Answer Relevancy, and Context Precision metrics. |
 
 ---
 
 ## 5. Technology Choices & Justification ("Why")
+
+- **Why Jest + React Testing Library (RTL) for Frontend?**  
+  While backend algorithms require Pytest, complex frontend UIs with async state, modals, and background task progress bars require robust component testing. Jest + RTL guarantees UI regression safety and validates form input validation, mock fetch requests, and state transitions without browser overhead.
 
 - **Why FastAPI BackgroundTasks for Ingestion?**  
   SEC EDGAR downloads, parsing, and vector embedding take 15 to 60+ seconds. Running ingestion synchronously in an HTTP request would cause browser timeouts and freeze the UI. `BackgroundTasks` returns HTTP 202 immediately and processes heavy workload asynchronously in the background.

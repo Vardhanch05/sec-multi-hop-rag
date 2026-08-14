@@ -82,12 +82,18 @@ python -m ingestion.pipeline
 
 ## Running Tests & Benchmarks
 
-### 1. Run Unit & Integration Test Suite
+### 1. Backend Python Unit & Integration Tests (Pytest)
 ```powershell
 .\venv\Scripts\python.exe -m pytest tests/
 ```
 
-### 2. Run RAGAS Benchmark Evaluation
+### 2. Frontend React Component Unit Tests (Jest + React Testing Library)
+```powershell
+cd frontend
+npm test
+```
+
+### 3. RAGAS Benchmark Evaluation
 ```powershell
 python evaluation/ragas_harness.py
 ```
