@@ -1,15 +1,93 @@
-How to Run the Application
-1. Start the FastAPI Backend
-Ensure your python virtual environment is active, then run:
+# SEC Multi-Hop RAG System (ScribeGraph) - Run Instructions
 
-powershell
+This guide provides step-by-step instructions on how to set up, run, and evaluate the application using Docker or standard local execution.
+
+---
+
+## Option 1: Running with Docker (Recommended)
+
+Ensure Docker Desktop is running on your machine.
+
+### 1. Start the Application Stack
+From the project root directory (`sec-rag-system`), run:
+
+```powershell
+docker compose up -d
+```
+
+This will build and start both containerized services in detached mode:
+- **Frontend Dashboard (Next.js)**: http://localhost:3000
+- **FastAPI Backend Service**: http://localhost:8001
+
+### 2. View Live Service Logs
+```powershell
+docker compose logs -f
+```
+
+### 3. Check Container Health
+```powershell
+docker compose ps
+```
+
+### 4. Stop the Containers
+```powershell
+docker compose down
+```
+
+---
+
+## Option 2: Running Locally (Without Docker)
+
+### 1. Environment Setup
+Activate your Python virtual environment and ensure dependencies are installed:
+
+```powershell
+# Activate virtual environment
+.\venv\Scripts\activate
+
+# Install Python dependencies
+pip install -r requirements.txt
+```
+
+Ensure environment variables are configured in `.env` (specifically `GROQ_API_KEY`).
+
+### 2. Start the FastAPI Backend
+In Terminal 1:
+
+```powershell
 python ui/api.py
-This runs the backend on http://127.0.0.1:8001.
+```
+This runs the backend API on http://127.0.0.1:8001.
 
-2. Start the Next.js Frontend
-In a separate shell:
+### 3. Start the Next.js Frontend
+In Terminal 2:
 
-powershell
+```powershell
 cd frontend
 npm run dev
-Open http://localhost:3000 to interact with the dashboard.
+```
+Open http://localhost:3000 in your browser to interact with the dashboard.
+
+---
+
+## Running Data Ingestion & Pipeline
+
+To fetch new filings from SEC EDGAR and index them into the vector database manually:
+
+```powershell
+python -m ingestion.pipeline
+```
+
+---
+
+## Running Tests & Benchmarks
+
+### 1. Run Unit & Integration Test Suite
+```powershell
+.\venv\Scripts\python.exe -m pytest tests/
+```
+
+### 2. Run RAGAS Benchmark Evaluation
+```powershell
+python evaluation/ragas_harness.py
+```

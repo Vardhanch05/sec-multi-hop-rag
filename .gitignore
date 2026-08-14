@@ -33,3 +33,9 @@ htmlcov/
 
 # Jupyter
 .ipynb_checkpoints/
+
+# Scratch & Temporary outputs
+scratch/
+answer_sec.txt
+pfe_chunks.txt
+test_out.txt
