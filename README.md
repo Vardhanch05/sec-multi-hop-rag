@@ -27,9 +27,17 @@ cp .env.example .env
 
 ## Usage
 
+To start the FastAPI backend server:
 ```bash
-streamlit run ui/app.py
+python ui/api.py
 ```
+
+To start the Next.js dashboard development server:
+```bash
+cd frontend
+npm run dev
+```
+Open `http://localhost:3000` in your web browser.
 
 ---
 
@@ -49,5 +57,7 @@ python evaluation/ragas_harness.py
 - **Contradiction detection**: cross-encoder/nli-deberta-v3-base
 - **Vector DB**: ChromaDB (dev) / Qdrant Cloud (prod)
 - **Relational DB**: SQLite (dev) / PostgreSQL (prod)
-- **Frontend**: Streamlit
+- **Frontend**: Next.js (App Router, Tailwind CSS, Framer Motion)
+- **Backend**: FastAPI (Python)
 - **Evaluation**: RAGAS
+
